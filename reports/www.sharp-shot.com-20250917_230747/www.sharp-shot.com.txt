@@ -1,0 +1,9 @@
+[23:07:47] === Gooberscan Security Report ===
+[23:07:47] Target: https://www.sharp-shot.com/
+[23:07:47] Scan started: Wed Sep 17 11:07:47 PM EDT 2025
+[23:07:47] 
+[23:07:47] 1. Running Nmap port scan...
+[23:07:47] Nmap scan completed with warnings
+[23:07:47] Nmap scan completed
+[23:07:47] 2. Running Nikto web vulnerability scan...
+[23:12:28] Nikto scan completed with warnings

@@ -1,0 +1,38 @@
+[22:57:06] === Gooberscan Security Report ===
+[22:57:06] Target: https://charleston.edu/
+[22:57:06] Scan started: Wed Sep 17 10:57:06 PM EDT 2025
+[22:57:06] 
+[22:57:06] 1. Running Nmap port scan...
+[22:57:07] Nmap scan completed with warnings
+[22:57:07] Nmap scan completed
+[22:57:07] 2. Running Nikto web vulnerability scan...
+[23:00:02] Nikto scan completed with warnings
+[23:00:02] Nikto scan completed
+[23:00:02] 3. Running GoBuster directory discovery...
+[23:00:02] GoBuster scan completed with warnings
+[23:00:02] GoBuster scan completed
+[23:00:02] 4. Running ffuf directory discovery...
+[23:00:23] ffuf scan completed
+[23:00:23] 5. Running sqlmap SQL injection test...
+[23:03:25] sqlmap scan completed
+[23:03:25] 6. Checking for WordPress...
+[23:03:25] WordPress detected, running WPScan...
+[23:03:25] WPScan not available, using Docker...
+[23:03:25] WPScan Docker scan completed with warnings
+[23:03:25] WordPress scan completed
+[23:03:25] 7. Running OWASP ZAP baseline scan...
+[23:03:25] ZAP scan completed with warnings
+[23:03:25] ZAP scan completed
+[23:03:25] 
+[23:03:25] === Scan Summary ===
+[23:03:25] Scan completed: Wed Sep 17 11:03:25 PM EDT 2025
+[23:03:25] Target: https://charleston.edu/
+[23:03:25] Report files:
+[23:03:25]   - Main report: reports/charleston.edu-20250917_225706/charleston.edu.txt
+[23:03:25]   - Nmap: reports/charleston.edu-20250917_225706/nmap.txt
+[23:03:25]   - Nikto: reports/charleston.edu-20250917_225706/nikto.txt
+[23:03:25]   - GoBuster: reports/charleston.edu-20250917_225706/gobuster.txt
+[23:03:25]   - ffuf: reports/charleston.edu-20250917_225706/ffuf.txt
+[23:03:25]   - sqlmap: reports/charleston.edu-20250917_225706/sqlmap/
+[23:03:26]   - WPScan: reports/charleston.edu-20250917_225706/wpscan.txt (if WordPress detected)
+[23:03:26]   - ZAP: reports/charleston.edu-20250917_225706/zap-report.json

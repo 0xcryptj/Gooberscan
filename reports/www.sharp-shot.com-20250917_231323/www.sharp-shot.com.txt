@@ -1,0 +1,35 @@
+[23:13:23] === Gooberscan Security Report ===
+[23:13:23] Target: https://www.sharp-shot.com/
+[23:13:23] Scan started: Wed Sep 17 11:13:23 PM EDT 2025
+[23:13:23] 
+[23:13:23] 1. Running Nmap port scan...
+[23:13:24] Nmap scan completed with warnings
+[23:13:24] Nmap scan completed
+[23:13:24] 2. Running Nikto web vulnerability scan...
+[23:15:30] Nikto scan completed with warnings
+[23:15:30] Nikto scan completed
+[23:15:30] 3. Running GoBuster directory discovery...
+[23:15:36] GoBuster scan completed with warnings
+[23:15:36] GoBuster scan completed
+[23:15:36] 4. Running ffuf directory discovery...
+[23:15:47] ffuf scan completed
+[23:15:47] 5. Running sqlmap SQL injection test...
+[23:15:56] sqlmap scan completed
+[23:15:56] 6. Checking for WordPress...
+[23:15:56] No WordPress detected, skipping WPScan
+[23:15:56] 7. Running OWASP ZAP baseline scan...
+[23:15:56] ZAP scan completed with warnings
+[23:15:56] ZAP scan completed
+[23:15:56] 
+[23:15:56] === Scan Summary ===
+[23:15:56] Scan completed: Wed Sep 17 11:15:56 PM EDT 2025
+[23:15:56] Target: https://www.sharp-shot.com/
+[23:15:56] Report files:
+[23:15:56]   - Main report: reports/www.sharp-shot.com-20250917_231323/www.sharp-shot.com.txt
+[23:15:56]   - Nmap: reports/www.sharp-shot.com-20250917_231323/nmap.txt
+[23:15:56]   - Nikto: reports/www.sharp-shot.com-20250917_231323/nikto.txt
+[23:15:56]   - GoBuster: reports/www.sharp-shot.com-20250917_231323/gobuster.txt
+[23:15:56]   - ffuf: reports/www.sharp-shot.com-20250917_231323/ffuf.txt
+[23:15:56]   - sqlmap: reports/www.sharp-shot.com-20250917_231323/sqlmap/
+[23:15:56]   - WPScan: reports/www.sharp-shot.com-20250917_231323/wpscan.txt (if WordPress detected)
+[23:15:56]   - ZAP: reports/www.sharp-shot.com-20250917_231323/zap-report.json

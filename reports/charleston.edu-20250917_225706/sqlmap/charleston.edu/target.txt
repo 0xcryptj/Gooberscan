@@ -1,0 +1,1 @@
+https://charleston.edu/academics/programs/index.php?search=&programs=Certificates&gradprograms=&college=&format=&type=&pageindex=0&pagesize=10 (GET)  # /usr/bin/sqlmap -u https://charleston.edu/ --batch --crawl=2 --output-dir=reports/charleston.edu-20250917_225706/sqlmap

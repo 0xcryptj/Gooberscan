@@ -1,0 +1,8 @@
+[22:54:00] === Gooberscan Security Report ===
+[22:54:00] Target: https://httpbin.org
+[22:54:00] Scan started: Wed Sep 17 10:54:00 PM EDT 2025
+[22:54:00] 
+[22:54:00] 1. Running Nmap port scan...
+[22:54:00] Nmap scan completed with warnings
+[22:54:00] Nmap scan completed
+[22:54:00] 2. Running Nikto web vulnerability scan...

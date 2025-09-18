@@ -65,6 +65,22 @@ if [ ! -d "/usr/share/seclists" ]; then
   chmod -R 755 /usr/share/seclists
 fi
 
+# Update sqlmap to latest version
+echo "Updating sqlmap to latest version..."
+if command -v sqlmap >/dev/null 2>&1; then
+  echo "[*] Current sqlmap version:"
+  sqlmap --version 2>/dev/null | head -1 || true
+  echo "[*] Updating sqlmap..."
+  pip install --upgrade sqlmap --break-system-packages 2>/dev/null || \
+  pip3 install --upgrade sqlmap --break-system-packages 2>/dev/null || \
+  echo "[!] Failed to update sqlmap - may need manual update"
+else
+  echo "[*] Installing latest sqlmap..."
+  pip install sqlmap --break-system-packages 2>/dev/null || \
+  pip3 install sqlmap --break-system-packages 2>/dev/null || \
+  echo "[!] Failed to install sqlmap via pip"
+fi
+
 # Ensure docker service running
 systemctl enable --now docker || true
 

@@ -1,41 +1,81 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Red ASCII Alert Box Function
+# Enhanced Red ASCII Alert Box Function
 print_alert_box() {
-  local message="$1"
-  local border=$(printf "%${#message}s" | tr ' ' '#')
+  local title="$1"
+  local content="$2"
+  local max_width=80
+  
   echo -e "\033[1;31m" # bright red
-  echo "########################################"
-  echo "# $message"
-  echo "########################################"
+  echo "╔══════════════════════════════════════════════════════════════════════════════╗"
+  echo "║                                                                              ║"
+  printf "║ %-76s ║\n" "$title"
+  echo "║                                                                              ║"
+  
+  if [ -n "$content" ]; then
+    echo "$content" | while IFS= read -r line; do
+      printf "║ %-76s ║\n" "$line"
+    done
+    echo "║                                                                              ║"
+  fi
+  
+  echo "╚══════════════════════════════════════════════════════════════════════════════╝"
   echo -e "\033[0m"
 }
 
-# Critical Finding Detection Function
+# Enhanced Critical Finding Detection Function
 detect_critical_findings() {
-  local cves_file="$1"
-  local urls_file="$2"
+  local worklist_dir="$1"
   local critical_found=false
+  local alert_content=""
   
   # Check for CVEs
-  if [ -s "$cves_file" ]; then
+  if [ -s "$worklist_dir/cves.txt" ]; then
+    alert_content+="🚨 CVEs DETECTED:\n"
     while read -r line; do
       if [[ "$line" =~ CVE-[0-9]{4}-[0-9]+ ]]; then
-        print_alert_box "CVE DETECTED: $line"
+        alert_content+="   • $line\n"
         critical_found=true
       fi
-    done < "$cves_file"
+    done < "$worklist_dir/cves.txt"
+    alert_content+="\n"
   fi
   
-  # Check for common vulnerability indicators
-  if [ -s "$urls_file" ]; then
+  # Check for critical exposed endpoints (highest priority)
+  if [ -s "$worklist_dir/exposed_critical_exposed.txt" ]; then
+    alert_content+="🚨 CRITICAL EXPOSED ENDPOINTS:\n"
+    while read -r endpoint; do
+      alert_content+="   • $endpoint\n"
+      critical_found=true
+    done < "$worklist_dir/exposed_critical_exposed.txt"
+    alert_content+="\n"
+  fi
+  
+  # Check for critical sensitive endpoints
+  if [ -s "$worklist_dir/sensitive_critical.txt" ]; then
+    alert_content+="🔴 CRITICAL SENSITIVE ENDPOINTS:\n"
     while read -r url; do
-      if [[ "$url" =~ (admin|login|wp-admin|phpmyadmin|backup|test|dev) ]]; then
-        print_alert_box "SENSITIVE ENDPOINT: $url"
-        critical_found=true
-      fi
-    done < "$urls_file"
+      alert_content+="   • $url\n"
+      critical_found=true
+    done < "$worklist_dir/sensitive_critical.txt"
+    alert_content+="\n"
+  fi
+  
+  # Check for high-risk sensitive endpoints
+  if [ -s "$worklist_dir/sensitive_high.txt" ]; then
+    alert_content+="🟠 HIGH-RISK ENDPOINTS:\n"
+    head -5 "$worklist_dir/sensitive_high.txt" | while read -r url; do
+      alert_content+="   • $url\n"
+    done
+    if [ "$(wc -l < "$worklist_dir/sensitive_high.txt")" -gt 5 ]; then
+      alert_content+="   ... and $(( $(wc -l < "$worklist_dir/sensitive_high.txt") - 5 )) more\n"
+    fi
+    alert_content+="\n"
+  fi
+  
+  if [ "$critical_found" = true ]; then
+    print_alert_box "🚨 CRITICAL SECURITY FINDINGS DETECTED 🚨" "$alert_content"
   fi
   
   return $critical_found
@@ -49,8 +89,8 @@ fi
 
 echo "[*] Using reports: $TARGET_RUN"
 
-# 1) Aggregate
-python3 scripts/aggregate_reports.py --reports "$TARGET_RUN"
+# 1) Aggregate with enhanced sensitive endpoint detection
+python3 scripts/enhanced_aggregate_reports.py --reports "$TARGET_RUN"
 
 WL="worklists/$(basename "$TARGET_RUN")"
 mkdir -p "$WL" audit
@@ -59,7 +99,7 @@ mkdir -p "$WL" audit
 echo ""
 echo "=== Critical Finding Analysis ==="
 CRITICAL_FOUND=false
-if detect_critical_findings "$WL/cves.txt" "$WL/urls.txt"; then
+if detect_critical_findings "$WL"; then
   CRITICAL_FOUND=true
 fi
 
@@ -71,7 +111,51 @@ echo ""
 # 2) ZAP baseline on each discovered URL (skip path-only lines)
 ZAP_OUT="audit/$(basename "$TARGET_RUN")-zap"
 mkdir -p "$ZAP_OUT"
-if command -v docker >/dev/null 2>&1; then
+
+# Check Docker availability and permissions
+check_docker_availability() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "[!] Docker not found; skipping ZAP runs."
+    return 1
+  fi
+  
+  # Test Docker permissions
+  if ! docker ps >/dev/null 2>&1; then
+    echo "[!] Docker permission denied. Attempting to fix..."
+    echo "[*] Adding user to docker group..."
+    sudo usermod -aG docker "$USER" 2>/dev/null || true
+    echo "[*] Starting Docker service..."
+    sudo systemctl start docker 2>/dev/null || true
+    echo "[!] Please log out and back in, then run: newgrp docker"
+    echo "[!] Or run: sudo docker ps to test Docker access"
+    return 1
+  fi
+  
+  return 0
+}
+
+# Alternative ZAP installation check
+check_zap_local() {
+  if command -v zaproxy >/dev/null 2>&1; then
+    echo "[*] Using local ZAP installation"
+    return 0
+  fi
+  
+  echo "[*] Attempting to install ZAP locally..."
+  if command -v apt >/dev/null 2>&1; then
+    sudo apt update && sudo apt install -y zaproxy 2>/dev/null || true
+    if command -v zaproxy >/dev/null 2>&1; then
+      echo "[+] ZAP installed locally"
+      return 0
+    fi
+  fi
+  
+  return 1
+}
+
+# Run ZAP scans
+if check_docker_availability; then
+  echo "[*] Running ZAP baseline scans with Docker..."
   while read -r url; do
     [[ -z "$url" || "$url" =~ ^/ ]] && continue
     safe="$(echo "$url" | sed 's/[:\/]/_/g')"
@@ -79,8 +163,18 @@ if command -v docker >/dev/null 2>&1; then
     docker run --rm -v "$(pwd)":/zap/wrk/ -t owasp/zap2docker-stable \
       zap-baseline.py -t "$url" -r "$ZAP_OUT/${safe}.html" || true
   done < "$WL/urls.txt"
+elif check_zap_local; then
+  echo "[*] Running ZAP baseline scans with local installation..."
+  while read -r url; do
+    [[ -z "$url" || "$url" =~ ^/ ]] && continue
+    safe="$(echo "$url" | sed 's/[:\/]/_/g')"
+    echo "[*] ZAP baseline: $url"
+    zaproxy -cmd -quickurl "$url" -quickout "$ZAP_OUT/${safe}.html" || true
+  done < "$WL/urls.txt"
 else
-  echo "[!] docker not found; skipping ZAP runs."
+  echo "[!] Neither Docker nor local ZAP available; skipping ZAP runs."
+  echo "[*] To fix Docker: sudo usermod -aG docker \$USER && newgrp docker"
+  echo "[*] To install ZAP locally: sudo apt install zaproxy"
 fi
 
 # 3) Optional intrusive steps (guarded)
@@ -172,13 +266,15 @@ TARGET_DOMAIN=$(basename "$TARGET_RUN" | cut -d'-' -f1)
 
 # Generate Metasploit RC if CVEs found
 if [ -s "$WL/cves.txt" ]; then
-  echo "[*] Generating Metasploit RC file for CVEs..."
-  python3 scripts/gen_msf_rc.py "$WL/cves.txt" "$TARGET_DOMAIN"
+  echo "[*] Generating targeted Metasploit RC file..."
+  python3 scripts/gen_msf_rc.py "$WL" "$TARGET_DOMAIN"
   MSF_RC="audit/${TARGET_DOMAIN}-auto.rc"
   if [ -f "$MSF_RC" ]; then
-    print_alert_box "Metasploit RC Generated: $MSF_RC"
+    print_alert_box "🎯 TARGETED METASPLOIT RC GENERATED" "File: $MSF_RC\nOnly includes modules for detected CVEs\nTo run: msfconsole -r $MSF_RC"
     echo "[*] To run: msfconsole -r $MSF_RC"
   fi
+else
+  echo "[*] No CVEs detected - skipping Metasploit RC generation"
 fi
 
 # Generate BurpSuite config if URLs found
@@ -191,6 +287,11 @@ if [ -s "$WL/urls.txt" ]; then
     echo "[*] Import URLs from: burp/${TARGET_DOMAIN}_urls.txt"
   fi
 fi
+
+# Generate comprehensive security summary
+echo ""
+echo "=== Generating Security Summary ==="
+python3 scripts/security_summary.py "$WL"
 
 # Final Summary
 echo ""

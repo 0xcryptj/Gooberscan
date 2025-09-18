@@ -1,0 +1,37 @@
+# Gooberscan Output Files - DO NOT COMMIT
+# These contain sensitive scan results and should never be pushed to Git
+
+# Scan outputs
+reports/
+worklists/
+audit/
+
+# Report file types
+*.html
+*.json
+*.xml
+*.txt
+
+# Temporary files
+*.tmp
+*.log
+*.pid
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker volumes
+docker-data/

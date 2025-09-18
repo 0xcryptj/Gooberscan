@@ -6,7 +6,7 @@ set -euo pipefail
 
 echo "╔══════════════════════════════════════════════════════════════════════════════╗"
 echo "║                                                                              ║"
-echo "║                    Gooberscan Advanced Post-Processing                     ║"
+echo "║                    Gooberscan Advanced Post-Processing                       ║"
 echo "║                                                                              ║"
 echo "╚══════════════════════════════════════════════════════════════════════════════╝"
 echo ""

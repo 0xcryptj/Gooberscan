@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Gooberscan Pre-commit Hook
+# Prevents accidental commits of sensitive scan results
+
+block_paths='^(reports/|worklists/|audit/)'
+
+if git diff --cached --name-only | grep -Eq "$block_paths"; then
+  echo "❌ Commit blocked: do not commit outputs from reports/, worklists/, or audit/." >&2
+  echo "   These directories contain sensitive scan results." >&2
+  echo "   Use 'git reset HEAD <file>' to unstage these files." >&2
+  exit 1
+fi
+
+# Check for sensitive file extensions
+sensitive_extensions='\.(html|json|xml|txt)$'
+
+if git diff --cached --name-only | grep -Eq "$sensitive_extensions"; then
+  echo "⚠️  Warning: You're committing files with sensitive extensions (.html, .json, .xml, .txt)" >&2
+  echo "   Make sure these are not scan results or sensitive data." >&2
+  echo "   Press Ctrl+C to cancel, or Enter to continue..." >&2
+  read -r
+fi
+
+echo "✅ Pre-commit checks passed"

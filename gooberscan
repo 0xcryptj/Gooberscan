@@ -170,3 +170,11 @@ echo "🎉 Scan completed successfully!"
 echo "📁 All reports saved to: $REPORT_DIR"
 echo "📄 Main report: $REPORT_FILE"
 echo ""
+
+# Post-scan pipeline integration
+read -r -p "Run post-scan pipeline (aggregate → ZAP → sqlmap/optional → audit)? [Y/n]: " POST
+POST=${POST:-Y}
+if [[ "${POST,,}" =~ ^y ]]; then
+  echo "[*] Launching pipeline…"
+  scripts/pipeline.sh "$REPORT_DIR" || true
+fi

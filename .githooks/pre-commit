@@ -4,10 +4,10 @@ set -euo pipefail
 # Gooberscan Pre-commit Hook
 # Prevents accidental commits of sensitive scan results
 
-block_paths='^(reports/|worklists/|audit/)'
+block_paths='^(reports/|worklists/|audit/|burp/)'
 
 if git diff --cached --name-only | grep -Eq "$block_paths"; then
-  echo "❌ Commit blocked: do not commit outputs from reports/, worklists/, or audit/." >&2
+  echo "❌ Commit blocked: do not commit outputs from reports/, worklists/, audit/, or burp/." >&2
   echo "   These directories contain sensitive scan results." >&2
   echo "   Use 'git reset HEAD <file>' to unstage these files." >&2
   exit 1

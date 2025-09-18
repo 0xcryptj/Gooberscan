@@ -5,6 +5,7 @@
 reports/
 worklists/
 audit/
+burp/
 
 # Report file types
 *.html

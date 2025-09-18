@@ -45,9 +45,25 @@ apt install -y \
   ruby-full \
   libcurl4-openssl-dev \
   openjdk-17-jre-headless \
-  ffuf \
-  seclists \
   docker.io
+
+# Install ffuf (Go-based web fuzzer)
+echo "Installing ffuf..."
+if ! command -v ffuf >/dev/null 2>&1; then
+  FFUF_VERSION="2.1.0"
+  wget -O /tmp/ffuf.tar.gz "https://github.com/ffuf/ffuf/releases/download/v${FFUF_VERSION}/ffuf_${FFUF_VERSION}_linux_amd64.tar.gz"
+  tar -xzf /tmp/ffuf.tar.gz -C /tmp/
+  mv /tmp/ffuf /usr/local/bin/
+  chmod +x /usr/local/bin/ffuf
+  rm /tmp/ffuf.tar.gz
+fi
+
+# Install SecLists
+echo "Installing SecLists..."
+if [ ! -d "/usr/share/seclists" ]; then
+  git clone https://github.com/danielmiessler/SecLists.git /usr/share/seclists
+  chmod -R 755 /usr/share/seclists
+fi
 
 # Ensure docker service running
 systemctl enable --now docker || true

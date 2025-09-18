@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ---------- dependency check ----------
+REQUIRED=(nmap nikto gobuster ffuf sqlmap docker)
+MISSING=()
+for cmd in "${REQUIRED[@]}"; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    MISSING+=("$cmd")
+  fi
+done
+
+if [ "${#MISSING[@]}" -ne 0 ]; then
+  echo "[!] Missing required commands: ${MISSING[*]}"
+  read -r -p "Run installer script to auto-install dependencies? (requires sudo) [Y/n]: " resp
+  resp=${resp:-Y}
+  if [[ "${resp,,}" =~ ^y ]]; then
+    if [ -f "./install-deps.sh" ]; then
+      echo "[*] Running installer..."
+      sudo bash ./install-deps.sh
+      echo "[*] Installer finished. Re-checking environment..."
+      exec "$0" "$@"   # restart script so checks pick up new binaries
+    else
+      echo "install-deps.sh not found in current directory. Aborting."
+      exit 1
+    fi
+  else
+    echo "Continuing without installing missing dependencies. Some features may be unavailable."
+  fi
+fi
+# ---------- end dependency check ----------
+
+# Gooberscan - Security Scanning Tool
+# Main entry point for security scanning operations
+
+echo "Gooberscan - Security Scanning Tool"
+echo "===================================="
+echo ""
+echo "Available commands will be implemented here..."
+echo "Dependencies checked and ready!"

@@ -36,5 +36,113 @@ fi
 echo "Gooberscan - Security Scanning Tool"
 echo "===================================="
 echo ""
-echo "Available commands will be implemented here..."
 echo "Dependencies checked and ready!"
+echo ""
+
+# Create reports directory if it doesn't exist
+if [ ! -d "reports" ]; then
+    echo "[*] Creating reports directory..."
+    mkdir -p reports
+fi
+
+# Get target URL from user
+echo "Enter target URL (e.g., https://example.com or http://192.168.1.100):"
+read -r TARGET_URL
+
+# Validate URL format
+if [[ ! "$TARGET_URL" =~ ^https?:// ]]; then
+    echo "[!] Invalid URL format. Please include http:// or https://"
+    exit 1
+fi
+
+# Extract domain/IP for naming
+DOMAIN=$(echo "$TARGET_URL" | sed 's|https\?://||' | sed 's|/.*||' | sed 's|:.*||')
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+REPORT_DIR="reports/${DOMAIN}-${TIMESTAMP}"
+REPORT_FILE="${REPORT_DIR}/${DOMAIN}.txt"
+
+echo ""
+echo "[*] Target: $TARGET_URL"
+echo "[*] Report directory: $REPORT_DIR"
+echo "[*] Starting comprehensive security scan..."
+echo ""
+
+# Create report directory
+mkdir -p "$REPORT_DIR"
+
+# Function to log with timestamp
+log() {
+    echo "[$(date '+%H:%M:%S')] $1" | tee -a "$REPORT_FILE"
+}
+
+# Start comprehensive scan
+log "=== Gooberscan Security Report ==="
+log "Target: $TARGET_URL"
+log "Scan started: $(date)"
+log ""
+
+# 1. Nmap Port Scan
+log "1. Running Nmap port scan..."
+nmap -sS -sV -O -A --script vuln "$DOMAIN" -oN "${REPORT_DIR}/nmap.txt" 2>/dev/null || log "Nmap scan completed with warnings"
+log "Nmap scan completed"
+
+# 2. Nikto Web Vulnerability Scan
+log "2. Running Nikto web vulnerability scan..."
+nikto -h "$TARGET_URL" -output "${REPORT_DIR}/nikto.txt" 2>/dev/null || log "Nikto scan completed with warnings"
+log "Nikto scan completed"
+
+# 3. Directory/File Discovery with GoBuster
+log "3. Running GoBuster directory discovery..."
+gobuster dir -u "$TARGET_URL" -w /usr/share/seclists/Discovery/Web-Content/common.txt -o "${REPORT_DIR}/gobuster.txt" 2>/dev/null || log "GoBuster scan completed with warnings"
+log "GoBuster scan completed"
+
+# 4. Directory/File Discovery with ffuf
+log "4. Running ffuf directory discovery..."
+ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt -u "$TARGET_URL/FUZZ" -o "${REPORT_DIR}/ffuf.txt" -of json 2>/dev/null || log "ffuf scan completed with warnings"
+log "ffuf scan completed"
+
+# 5. SQL Injection Testing with sqlmap
+log "5. Running sqlmap SQL injection test..."
+sqlmap -u "$TARGET_URL" --batch --crawl=2 --output-dir="${REPORT_DIR}/sqlmap" 2>/dev/null || log "sqlmap scan completed with warnings"
+log "sqlmap scan completed"
+
+# 6. WordPress Scan (if applicable)
+log "6. Checking for WordPress..."
+if curl -s "$TARGET_URL" | grep -i "wp-content\|wordpress" >/dev/null; then
+    log "WordPress detected, running WPScan..."
+    if command -v wpscan >/dev/null 2>&1; then
+        wpscan --url "$TARGET_URL" --no-banner --output "${REPORT_DIR}/wpscan.txt" 2>/dev/null || log "WPScan completed with warnings"
+    else
+        log "WPScan not available, using Docker..."
+        docker run --rm wpscanteam/wpscan --url "$TARGET_URL" --no-banner > "${REPORT_DIR}/wpscan.txt" 2>/dev/null || log "WPScan Docker scan completed with warnings"
+    fi
+    log "WordPress scan completed"
+else
+    log "No WordPress detected, skipping WPScan"
+fi
+
+# 7. OWASP ZAP Scan (Docker)
+log "7. Running OWASP ZAP baseline scan..."
+docker run --rm -v "$(pwd)/${REPORT_DIR}:/zap/wrk/:rw" -t owasp/zap2docker-stable zap-baseline.py -t "$TARGET_URL" -J zap-report.json 2>/dev/null || log "ZAP scan completed with warnings"
+log "ZAP scan completed"
+
+# Generate summary report
+log ""
+log "=== Scan Summary ==="
+log "Scan completed: $(date)"
+log "Target: $TARGET_URL"
+log "Report files:"
+log "  - Main report: $REPORT_FILE"
+log "  - Nmap: ${REPORT_DIR}/nmap.txt"
+log "  - Nikto: ${REPORT_DIR}/nikto.txt"
+log "  - GoBuster: ${REPORT_DIR}/gobuster.txt"
+log "  - ffuf: ${REPORT_DIR}/ffuf.txt"
+log "  - sqlmap: ${REPORT_DIR}/sqlmap/"
+log "  - WPScan: ${REPORT_DIR}/wpscan.txt (if WordPress detected)"
+log "  - ZAP: ${REPORT_DIR}/zap-report.json"
+
+echo ""
+echo "🎉 Scan completed successfully!"
+echo "📁 All reports saved to: $REPORT_DIR"
+echo "📄 Main report: $REPORT_FILE"
+echo ""

@@ -47,7 +47,7 @@ detect_critical_findings() {
     alert_content+="🚨 CRITICAL EXPOSED ENDPOINTS:\n"
     while read -r endpoint; do
       # Clean up the endpoint line and extract just the URL
-      clean_url=$(echo "$endpoint" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g')
+      clean_url=$(echo "$endpoint" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g' | sed 's/\[//g' | sed 's/\]//g' | sed 's/\x1b//g' | sed 's/\x1B//g')
       alert_content+="   • $clean_url\n"
       critical_found=true
     done < "$worklist_dir/exposed_critical_exposed.txt"
@@ -63,7 +63,7 @@ detect_critical_findings() {
     
     while read -r path; do
       # Clean up the path and create full URL
-      clean_path=$(echo "$path" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g')
+      clean_path=$(echo "$path" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g' | sed 's/\[//g' | sed 's/\]//g' | sed 's/\x1b//g' | sed 's/\x1B//g')
       if [[ "$clean_path" =~ ^https?:// ]]; then
         full_url="$clean_path"
       elif [[ "$clean_path" =~ ^/ ]]; then
@@ -87,7 +87,7 @@ detect_critical_findings() {
     count=0
     while read -r path && [ $count -lt 5 ]; do
       # Clean up the path and create full URL
-      clean_path=$(echo "$path" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g')
+      clean_path=$(echo "$path" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g' | sed 's/\[//g' | sed 's/\]//g' | sed 's/\x1b//g' | sed 's/\x1B//g')
       if [[ "$clean_path" =~ ^https?:// ]]; then
         full_url="$clean_path"
       elif [[ "$clean_path" =~ ^/ ]]; then
@@ -106,9 +106,14 @@ detect_critical_findings() {
   fi
   
   if [ "$critical_found" = true ]; then
-    # Clean ANSI codes from alert content
-    clean_alert_content=$(echo "$alert_content" | sed 's/\[[0-9;]*m//g')
-    print_alert_box "🚨 CRITICAL SECURITY FINDINGS DETECTED 🚨" "$clean_alert_content"
+    echo ""
+    echo "🚨 CRITICAL SECURITY FINDINGS DETECTED 🚨"
+    echo "=========================================="
+    echo ""
+    # Clean ANSI codes and display content normally
+    clean_alert_content=$(echo "$alert_content" | sed 's/\[[0-9;]*m//g' | sed 's/\\n/\n/g' | sed 's/\[//g' | sed 's/\]//g')
+    echo -e "$clean_alert_content"
+    echo ""
   fi
   
   if [ "$critical_found" = true ]; then

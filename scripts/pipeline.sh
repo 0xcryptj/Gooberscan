@@ -187,6 +187,32 @@ if [ -f "$TARGET_RUN/nikto.txt" ]; then
     echo ""
 fi
 
+# Show DNS provider information
+echo "🌐 DNS INFRASTRUCTURE:"
+python3 scripts/dns_provider_detection.py "$DOMAIN" --quiet --output "$WL/dns_info.json" 2>/dev/null
+if [ -f "$WL/dns_info.json" ]; then
+    # Extract key DNS info
+    nameservers=$(python3 -c "
+import json
+try:
+    with open('$WL/dns_info.json') as f:
+        data = json.load(f)
+    providers = set([p['provider'] for p in data['dns_providers']])
+    ips = data['a_records'][:3]  # First 3 IPs
+    print('Providers:', ', '.join(sorted(providers)))
+    print('IPs:', ', '.join(ips))
+except:
+    pass
+")
+    echo "   $nameservers"
+else
+    echo "   DNS analysis failed"
+fi
+echo ""
+
+# Re-run aggregation to include DNS info
+python3 scripts/enhanced_aggregate_reports.py --reports "$TARGET_RUN" >/dev/null 2>&1
+
 # 1.5) Detect Critical Findings
 CRITICAL_FOUND=false
 if detect_critical_findings "$WL"; then

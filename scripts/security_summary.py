@@ -120,32 +120,57 @@ def print_security_summary(worklist_dir):
     total_sensitive = sum(len(endpoints) for endpoints in sensitive.values())
     
     if total_sensitive > 0:
-    print("🔍 SENSITIVE ENDPOINTS DISCOVERED:")
-    
-    # Extract domain from worklist directory name
-    domain = worklist_dir.split('/')[-1].split('-')[0] if '-' in worklist_dir.split('/')[-1] else 'unknown'
-    base_url = f"https://{domain}"
-    
-    for level in ['critical', 'high']:  # Only show critical and high
-        endpoints = sensitive.get(level, [])
-        if endpoints:
-            level_emoji = {'critical': '🔴', 'high': '🟠'}
-            print(f"   {level_emoji[level]} {level.upper()} RISK ({len(endpoints)} endpoints):")
-            for endpoint in endpoints[:3]:  # Show first 3
-                # Clean up the endpoint and create full URL
-                clean_endpoint = endpoint.replace(' (Status: 400)', '').replace(' (Status: 429)', '').replace('[33m', '').replace('[0m', '').replace('[32m', '').strip()
-                if clean_endpoint.startswith('/'):
-                    full_url = f"{base_url}{clean_endpoint}"
-                elif clean_endpoint.startswith('http'):
-                    full_url = clean_endpoint
-                else:
-                    full_url = f"{base_url}/{clean_endpoint}"
-                print(f"      • {full_url}")
-            if len(endpoints) > 3:
-                print(f"      ... and {len(endpoints) - 3} more")
-            print()
+        print("🔍 SENSITIVE ENDPOINTS DISCOVERED:")
+        
+        # Extract domain from worklist directory name
+        domain = worklist_dir.split('/')[-1].split('-')[0] if '-' in worklist_dir.split('/')[-1] else 'unknown'
+        base_url = f"https://{domain}"
+        
+        for level in ['critical', 'high']:  # Only show critical and high
+            endpoints = sensitive.get(level, [])
+            if endpoints:
+                level_emoji = {'critical': '🔴', 'high': '🟠'}
+                print(f"   {level_emoji[level]} {level.upper()} RISK ({len(endpoints)} endpoints):")
+                for endpoint in endpoints[:3]:  # Show first 3
+                    # Clean up the endpoint and create full URL
+                    clean_endpoint = endpoint.replace(' (Status: 400)', '').replace(' (Status: 429)', '').replace('[33m', '').replace('[0m', '').replace('[32m', '').strip()
+                    if clean_endpoint.startswith('/'):
+                        full_url = f"{base_url}{clean_endpoint}"
+                    elif clean_endpoint.startswith('http'):
+                        full_url = clean_endpoint
+                    else:
+                        full_url = f"{base_url}/{clean_endpoint}"
+                    print(f"      • {full_url}")
+                if len(endpoints) > 3:
+                    print(f"      ... and {len(endpoints) - 3} more")
+                print()
     else:
         print("✅ No sensitive endpoints detected")
+        print()
+    
+    # DNS Infrastructure
+    dns_info = data.get('dns_info', {})
+    if dns_info:
+        print("🌐 DNS INFRASTRUCTURE:")
+        print(f"   Domain: {dns_info.get('domain', 'Unknown')}")
+        
+        # DNS Providers
+        providers = set([p['provider'] for p in dns_info.get('dns_providers', [])])
+        if providers:
+            print(f"   Providers: {', '.join(sorted(providers))}")
+        
+        # IP Addresses
+        a_records = dns_info.get('a_records', [])
+        if a_records:
+            print(f"   IP Addresses: {', '.join(a_records[:3])}")
+            if len(a_records) > 3:
+                print(f"   ... and {len(a_records) - 3} more IPs")
+        
+        # Mail Servers
+        mx_records = dns_info.get('mx_records', [])
+        if mx_records:
+            print(f"   Mail Servers: {', '.join([mx['server'] for mx in mx_records[:2]])}")
+        
         print()
     
     # URLs summary

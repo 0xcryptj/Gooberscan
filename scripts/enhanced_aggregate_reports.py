@@ -382,6 +382,15 @@ def main():
                 content.append(f"{clean_url}")
             (outdir/filename).write_text("\n".join(content)+"\n")
 
+    # Include DNS information if available
+    dns_file = outdir / "dns_info.json"
+    if dns_file.exists():
+        try:
+            dns_data = json.loads(read_text(dns_file))
+            result["dns_info"] = dns_data
+        except Exception as e:
+            print(f"[!] Error reading DNS info: {e}")
+
     # machine-readable export for pipeline
     Path("worklists").mkdir(exist_ok=True, parents=True)
     (outdir/"aggregate.json").write_text(json.dumps(result, indent=2))

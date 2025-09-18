@@ -105,10 +105,26 @@ log "Target: $TARGET_URL"
 log "Scan started: $(date)"
 log ""
 
-# 1. Nmap Port Scan
-log "1. Running Nmap port scan..."
-nmap -sS -sV -O -A --script vuln "$DOMAIN" -oN "${REPORT_DIR}/nmap.txt" 2>/dev/null || log "Nmap scan completed with warnings"
-log "Nmap scan completed"
+# 1. Nmap Intense Port Scan
+log "1. Running Nmap intense port scan..."
+log "   Phase 1: Quick scan of top 1000 ports..."
+nmap -T4 -sT -sV -O --top-ports 1000 "$DOMAIN" -oN "${REPORT_DIR}/nmap-quick.txt" -oX "${REPORT_DIR}/nmap-quick.xml" 2>/dev/null || log "Quick nmap scan completed with warnings"
+
+log "   Phase 2: Full port scan..."
+nmap -T4 -sT -sV -O -p- "$DOMAIN" -oN "${REPORT_DIR}/nmap-full.txt" -oX "${REPORT_DIR}/nmap-full.xml" 2>/dev/null || log "Full nmap scan completed with warnings"
+
+log "   Phase 3: Aggressive scan with scripts..."
+nmap -T4 -sT -sV -O -A --script vuln,discovery,auth "$DOMAIN" -oN "${REPORT_DIR}/nmap-aggressive.txt" -oX "${REPORT_DIR}/nmap-aggressive.xml" 2>/dev/null || log "Aggressive nmap scan completed with warnings"
+
+log "   Phase 4: UDP scan of common ports..."
+nmap -T4 -sU --top-ports 1000 "$DOMAIN" -oN "${REPORT_DIR}/nmap-udp.txt" -oX "${REPORT_DIR}/nmap-udp.xml" 2>/dev/null || log "UDP nmap scan completed with warnings"
+
+# Combine results into main nmap files
+log "   Combining scan results..."
+cat "${REPORT_DIR}/nmap-quick.txt" "${REPORT_DIR}/nmap-full.txt" "${REPORT_DIR}/nmap-aggressive.txt" "${REPORT_DIR}/nmap-udp.txt" > "${REPORT_DIR}/nmap.txt" 2>/dev/null || true
+cp "${REPORT_DIR}/nmap-aggressive.xml" "${REPORT_DIR}/nmap.xml" 2>/dev/null || true
+
+log "Nmap intense scanning completed"
 
 # 2. Nikto Web Vulnerability Scan
 log "2. Running Nikto web vulnerability scan..."
@@ -157,7 +173,12 @@ log "Scan completed: $(date)"
 log "Target: $TARGET_URL"
 log "Report files:"
 log "  - Main report: $REPORT_FILE"
-log "  - Nmap: ${REPORT_DIR}/nmap.txt"
+log "  - Nmap (combined): ${REPORT_DIR}/nmap.txt"
+log "  - Nmap quick scan: ${REPORT_DIR}/nmap-quick.txt"
+log "  - Nmap full scan: ${REPORT_DIR}/nmap-full.txt"
+log "  - Nmap aggressive: ${REPORT_DIR}/nmap-aggressive.txt"
+log "  - Nmap UDP scan: ${REPORT_DIR}/nmap-udp.txt"
+log "  - Nmap XML: ${REPORT_DIR}/nmap.xml"
 log "  - Nikto: ${REPORT_DIR}/nikto.txt"
 log "  - GoBuster: ${REPORT_DIR}/gobuster.txt"
 log "  - ffuf: ${REPORT_DIR}/ffuf.txt"

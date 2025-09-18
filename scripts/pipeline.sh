@@ -162,12 +162,48 @@ echo ""
 echo "📊 SCAN SUMMARY:"
 echo "================"
 
-# Show hosts and ports
+# Show hosts and ports from nmap
 if [ -f "$WL/hosts.txt" ] && [ -s "$WL/hosts.txt" ]; then
     echo "🖥️  HOSTS & PORTS:"
     cat "$WL/hosts.txt" | head -10
     if [ "$(wc -l < "$WL/hosts.txt")" -gt 10 ]; then
         echo "   ... and $(( $(wc -l < "$WL/hosts.txt") - 10 )) more hosts"
+    fi
+    echo ""
+elif [ -f "$TARGET_RUN/nmap.xml" ] || [ -f "$TARGET_RUN/nmap.txt" ]; then
+    echo "🖥️  HOSTS & PORTS:"
+    # Extract hosts and ports from nmap files
+    if [ -f "$TARGET_RUN/nmap.xml" ]; then
+        python3 -c "
+import xml.etree.ElementTree as ET
+try:
+    tree = ET.parse('$TARGET_RUN/nmap.xml')
+    root = tree.getroot()
+    for host in root.findall('host'):
+        addr = None
+        for a in host.findall('address'):
+            if a.get('addrtype') in ('ipv4', 'ipv6'):
+                addr = a.get('addr')
+                break
+        if addr:
+            ports = []
+            for ports_el in host.findall('ports'):
+                for p in ports_el.findall('port'):
+                    state = p.find('state')
+                    if state is not None and state.get('state') == 'open':
+                        portnum = p.get('portid')
+                        service = p.find('service')
+                        svc = service.get('name') if service is not None else ''
+                        ports.append(f'{portnum}/{svc}')
+            if ports:
+                print(f'   {addr} {\" \".join(ports)}')
+            else:
+                print(f'   {addr}')
+except Exception as e:
+    print(f'   Error parsing nmap XML: {e}')
+" 2>/dev/null || echo "   Error parsing nmap data"
+    elif [ -f "$TARGET_RUN/nmap.txt" ]; then
+        grep -E "Nmap scan report|open" "$TARGET_RUN/nmap.txt" | head -10 | sed 's/^/   /'
     fi
     echo ""
 else

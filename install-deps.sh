@@ -75,8 +75,8 @@ fi
 
 # pipx (preferred for Python CLI tools)
 echo "Installing pipx and ensuring path..."
-python3 -m pip install --upgrade pip setuptools
-python3 -m pip install --upgrade pipx
+# Install pipx via apt to avoid externally-managed environment issues
+apt install -y pipx
 python3 -m pipx ensurepath
 
 # create Python venv for optional Python tools and common libs

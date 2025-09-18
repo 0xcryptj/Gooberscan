@@ -33,6 +33,15 @@ fi
 # Gooberscan - Security Scanning Tool
 # Main entry point for security scanning operations
 
+# ASCII Banner
+echo " ▗▄▄▖ ▗▄▖  ▗▄▖ ▗▄▄▖ ▗▄▄▄▖▗▄▄▖  ▗▄▄▖ ▗▄▄▖ ▗▄▖ ▗▖  ▗▖"
+echo "▐▌   ▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌ ▐▌▐▌   ▐▌   ▐▌ ▐▌▐▛▚▖▐▌"
+echo "▐▌▝▜▌▐▌ ▐▌▐▌ ▐▌▐▛▀▚▖▐▛▀▀▘▐▛▀▚▖ ▝▀▚▖▐▌   ▐▛▀▜▌▐▌ ▝▜▌"
+echo "▝▚▄▞▘▝▚▄▞▘▝▚▄▞▘▐▙▄▞▘▐▙▄▄▖▐▌ ▐▌▗▄▄▞▘▝▚▄▄▖▐▌ ▐▌▐▌  ▐▌"
+echo "                                                   "
+echo "                                                   "
+echo "                                                   "
+echo ""
 echo "Gooberscan - Security Scanning Tool"
 echo "===================================="
 echo ""

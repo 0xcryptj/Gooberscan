@@ -35,13 +35,15 @@ def categorize_sensitive_endpoints(urls):
     categorized = {'critical': [], 'high': [], 'medium': [], 'low': []}
     
     for url in urls:
-        url_lower = url.lower()
+        # Clean ANSI codes from the URL
+        clean_url = re.sub(r'\[[0-9;]*m', '', url).strip()
+        url_lower = clean_url.lower()
         categorized_flag = False
         
         for level, patterns in SENSITIVE_PATTERNS.items():
             for pattern in patterns:
                 if re.search(pattern, url_lower):
-                    categorized[level].append(url)
+                    categorized[level].append(clean_url)
                     categorized_flag = True
                     break
             if categorized_flag:
@@ -106,7 +108,9 @@ def extract_exposed_endpoints_from_reports(reports_dir):
         content = read_text(gob_file)
         for line in content.splitlines():
             # Parse GoBuster format: /path [33m (Status: XXX) [0m [Size: YYY]
-            match = re.search(r'^([^\s]+).*?Status:\s*(\d+).*?Size:\s*(\d+)', line)
+            # Clean the line first to remove ANSI codes
+            clean_line = re.sub(r'\[[0-9;]*m', '', line)
+            match = re.search(r'^([^\s]+).*?Status:\s*(\d+).*?Size:\s*(\d+)', clean_line)
             if match:
                 path = match.group(1)
                 status_code = match.group(2)
@@ -232,11 +236,13 @@ def extract_sensitive_endpoints_from_reports(reports_dir):
         content = read_text(gob_file)
         urls = []
         for line in content.splitlines():
-            m = URL_RE.search(line)
+            # Clean ANSI codes from the line
+            clean_line = re.sub(r'\[[0-9;]*m', '', line)
+            m = URL_RE.search(clean_line)
             if m:
                 urls.append(m.group(0))
-            elif line.startswith("/"):
-                urls.append(line.strip())
+            elif clean_line.startswith("/"):
+                urls.append(clean_line.strip())
         
         categorized = categorize_sensitive_endpoints(urls)
         for level in sensitive_endpoints:
@@ -292,9 +298,11 @@ def main():
     # gobuster urls
     if gob_txt:
         for line in read_text(gob_txt).splitlines():
-            m = URL_RE.search(line)
+            # Clean ANSI codes from the line
+            clean_line = re.sub(r'\[[0-9;]*m', '', line)
+            m = URL_RE.search(clean_line)
             if m: result["urls"].append(m.group(0))
-            elif line.startswith("/"): result["urls"].append(line.strip())
+            elif clean_line.startswith("/"): result["urls"].append(clean_line.strip())
 
     # ffuf urls
     if ffuf_json and ffuf_json.exists():
@@ -339,10 +347,29 @@ def main():
     (outdir/"params.txt").write_text("\n".join(params)+"\n" if params else "")
     (outdir/"cves.txt").write_text("\n".join(result["cves"])+"\n" if result["cves"] else "")
     
-    # Write sensitive endpoints by category
+    # Write sensitive endpoints by category with full URLs
+    base_domain = rpt.name.split('-')[0] if '-' in rpt.name else 'unknown'
+    base_url = f"https://{base_domain}"
+    
     for level, endpoints in result["sensitive_endpoints"].items():
         if endpoints:
-            (outdir/f"sensitive_{level}.txt").write_text("\n".join(endpoints)+"\n")
+            content = []
+            for endpoint in endpoints:
+                # Clean up the endpoint and create full URL
+                # Remove all ANSI escape sequences and status information
+                clean_endpoint = re.sub(r'\[[0-9;]*m', '', endpoint)  # Remove ANSI codes
+                clean_endpoint = re.sub(r' \(Status: [0-9]+\)', '', clean_endpoint)  # Remove status
+                clean_endpoint = re.sub(r' \[Size: [0-9]+\]', '', clean_endpoint)  # Remove size
+                clean_endpoint = clean_endpoint.strip()
+                
+                if clean_endpoint.startswith('/'):
+                    full_url = f"{base_url}{clean_endpoint}"
+                elif clean_endpoint.startswith('http'):
+                    full_url = clean_endpoint
+                else:
+                    full_url = f"{base_url}/{clean_endpoint}"
+                content.append(full_url)
+            (outdir/f"sensitive_{level}.txt").write_text("\n".join(content)+"\n")
     
     # Write exposed endpoints by category
     for category, endpoints in result["exposed_endpoints"].items():
@@ -350,7 +377,9 @@ def main():
             filename = f"exposed_{category}.txt"
             content = []
             for endpoint in endpoints:
-                content.append(f"{endpoint['full_url']} (Status: {endpoint['status_code']}, Size: {endpoint['size']})")
+                # Clean up the URL by removing ANSI color codes
+                clean_url = re.sub(r'\[[0-9;]*m', '', endpoint['full_url']).strip()
+                content.append(f"{clean_url}")
             (outdir/filename).write_text("\n".join(content)+"\n")
 
     # machine-readable export for pipeline

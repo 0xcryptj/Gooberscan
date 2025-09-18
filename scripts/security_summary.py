@@ -69,7 +69,9 @@ def print_security_summary(worklist_dir):
         if critical_exposed:
             print(f"   🔴 CRITICAL EXPOSED ({len(critical_exposed)} endpoints):")
             for endpoint in critical_exposed[:5]:
-                print(f"      • {endpoint['full_url']} (Status: {endpoint['status_code']}, Size: {endpoint['size']})")
+                # Clean up the URL
+                clean_url = endpoint['full_url'].replace('[32m', '').replace('[0m', '').strip()
+                print(f"      • {clean_url}")
             if len(critical_exposed) > 5:
                 print(f"      ... and {len(critical_exposed) - 5} more")
             print()
@@ -79,7 +81,9 @@ def print_security_summary(worklist_dir):
         if high_exposed:
             print(f"   🟠 HIGH EXPOSED ({len(high_exposed)} endpoints):")
             for endpoint in high_exposed[:5]:
-                print(f"      • {endpoint['full_url']} (Status: {endpoint['status_code']}, Size: {endpoint['size']})")
+                # Clean up the URL
+                clean_url = endpoint['full_url'].replace('[32m', '').replace('[0m', '').strip()
+                print(f"      • {clean_url}")
             if len(high_exposed) > 5:
                 print(f"      ... and {len(high_exposed) - 5} more")
             print()
@@ -89,7 +93,9 @@ def print_security_summary(worklist_dir):
         if medium_exposed:
             print(f"   🟡 MEDIUM EXPOSED ({len(medium_exposed)} endpoints):")
             for endpoint in medium_exposed[:5]:
-                print(f"      • {endpoint['full_url']} (Status: {endpoint['status_code']}, Size: {endpoint['size']})")
+                # Clean up the URL
+                clean_url = endpoint['full_url'].replace('[32m', '').replace('[0m', '').strip()
+                print(f"      • {clean_url}")
             if len(medium_exposed) > 5:
                 print(f"      ... and {len(medium_exposed) - 5} more")
             print()
@@ -99,7 +105,9 @@ def print_security_summary(worklist_dir):
         if protected:
             print(f"   🔒 PROTECTED ENDPOINTS ({len(protected)} endpoints):")
             for endpoint in protected[:5]:
-                print(f"      • {endpoint['full_url']} (Status: {endpoint['status_code']}, Size: {endpoint['size']})")
+                # Clean up the URL
+                clean_url = endpoint['full_url'].replace('[32m', '').replace('[0m', '').strip()
+                print(f"      • {clean_url}")
             if len(protected) > 5:
                 print(f"      ... and {len(protected) - 5} more")
             print()
@@ -112,18 +120,30 @@ def print_security_summary(worklist_dir):
     total_sensitive = sum(len(endpoints) for endpoints in sensitive.values())
     
     if total_sensitive > 0:
-        print("🔍 SENSITIVE ENDPOINTS DISCOVERED:")
-        
-        for level in ['critical', 'high', 'medium', 'low']:
-            endpoints = sensitive.get(level, [])
-            if endpoints:
-                level_emoji = {'critical': '🔴', 'high': '🟠', 'medium': '🟡', 'low': '🟢'}
-                print(f"   {level_emoji[level]} {level.upper()} RISK ({len(endpoints)} endpoints):")
-                for endpoint in endpoints[:5]:  # Show first 5
-                    print(f"      • {endpoint}")
-                if len(endpoints) > 5:
-                    print(f"      ... and {len(endpoints) - 5} more")
-                print()
+    print("🔍 SENSITIVE ENDPOINTS DISCOVERED:")
+    
+    # Extract domain from worklist directory name
+    domain = worklist_dir.split('/')[-1].split('-')[0] if '-' in worklist_dir.split('/')[-1] else 'unknown'
+    base_url = f"https://{domain}"
+    
+    for level in ['critical', 'high']:  # Only show critical and high
+        endpoints = sensitive.get(level, [])
+        if endpoints:
+            level_emoji = {'critical': '🔴', 'high': '🟠'}
+            print(f"   {level_emoji[level]} {level.upper()} RISK ({len(endpoints)} endpoints):")
+            for endpoint in endpoints[:3]:  # Show first 3
+                # Clean up the endpoint and create full URL
+                clean_endpoint = endpoint.replace(' (Status: 400)', '').replace(' (Status: 429)', '').replace('[33m', '').replace('[0m', '').replace('[32m', '').strip()
+                if clean_endpoint.startswith('/'):
+                    full_url = f"{base_url}{clean_endpoint}"
+                elif clean_endpoint.startswith('http'):
+                    full_url = clean_endpoint
+                else:
+                    full_url = f"{base_url}/{clean_endpoint}"
+                print(f"      • {full_url}")
+            if len(endpoints) > 3:
+                print(f"      ... and {len(endpoints) - 3} more")
+            print()
     else:
         print("✅ No sensitive endpoints detected")
         print()

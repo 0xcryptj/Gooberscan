@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
 # Enhanced Red ASCII Alert Box Function
 print_alert_box() {
@@ -46,17 +46,32 @@ detect_critical_findings() {
   if [ -s "$worklist_dir/exposed_critical_exposed.txt" ]; then
     alert_content+="🚨 CRITICAL EXPOSED ENDPOINTS:\n"
     while read -r endpoint; do
-      alert_content+="   • $endpoint\n"
+      # Clean up the endpoint line and extract just the URL
+      clean_url=$(echo "$endpoint" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g')
+      alert_content+="   • $clean_url\n"
       critical_found=true
     done < "$worklist_dir/exposed_critical_exposed.txt"
     alert_content+="\n"
   fi
   
-  # Check for critical sensitive endpoints
+  # Check for critical sensitive endpoints - convert to full URLs
   if [ -s "$worklist_dir/sensitive_critical.txt" ]; then
     alert_content+="🔴 CRITICAL SENSITIVE ENDPOINTS:\n"
-    while read -r url; do
-      alert_content+="   • $url\n"
+    # Extract domain from worklist directory name
+    domain=$(basename "$worklist_dir" | cut -d'-' -f1)
+    base_url="https://$domain"
+    
+    while read -r path; do
+      # Clean up the path and create full URL
+      clean_path=$(echo "$path" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g')
+      if [[ "$clean_path" =~ ^https?:// ]]; then
+        full_url="$clean_path"
+      elif [[ "$clean_path" =~ ^/ ]]; then
+        full_url="$base_url$clean_path"
+      else
+        full_url="$base_url/$clean_path"
+      fi
+      alert_content+="   • $full_url\n"
       critical_found=true
     done < "$worklist_dir/sensitive_critical.txt"
     alert_content+="\n"
@@ -65,9 +80,25 @@ detect_critical_findings() {
   # Check for high-risk sensitive endpoints
   if [ -s "$worklist_dir/sensitive_high.txt" ]; then
     alert_content+="🟠 HIGH-RISK ENDPOINTS:\n"
-    head -5 "$worklist_dir/sensitive_high.txt" | while read -r url; do
-      alert_content+="   • $url\n"
-    done
+    # Extract domain from worklist directory name
+    domain=$(basename "$worklist_dir" | cut -d'-' -f1)
+    base_url="https://$domain"
+    
+    count=0
+    while read -r path && [ $count -lt 5 ]; do
+      # Clean up the path and create full URL
+      clean_path=$(echo "$path" | sed 's/ (Status:.*//' | sed 's/\[[0-9;]*m//g')
+      if [[ "$clean_path" =~ ^https?:// ]]; then
+        full_url="$clean_path"
+      elif [[ "$clean_path" =~ ^/ ]]; then
+        full_url="$base_url$clean_path"
+      else
+        full_url="$base_url/$clean_path"
+      fi
+      alert_content+="   • $full_url\n"
+      count=$((count + 1))
+    done < "$worklist_dir/sensitive_high.txt"
+    
     if [ "$(wc -l < "$worklist_dir/sensitive_high.txt")" -gt 5 ]; then
       alert_content+="   ... and $(( $(wc -l < "$worklist_dir/sensitive_high.txt") - 5 )) more\n"
     fi
@@ -75,10 +106,16 @@ detect_critical_findings() {
   fi
   
   if [ "$critical_found" = true ]; then
-    print_alert_box "🚨 CRITICAL SECURITY FINDINGS DETECTED 🚨" "$alert_content"
+    # Clean ANSI codes from alert content
+    clean_alert_content=$(echo "$alert_content" | sed 's/\[[0-9;]*m//g')
+    print_alert_box "🚨 CRITICAL SECURITY FINDINGS DETECTED 🚨" "$clean_alert_content"
   fi
   
-  return $critical_found
+  if [ "$critical_found" = true ]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 TARGET_RUN="${1:-}"
@@ -87,17 +124,70 @@ if [ -z "$TARGET_RUN" ]; then
 fi
 [ -z "$TARGET_RUN" ] && { echo "No reports/ run found. Provide path: scripts/pipeline.sh reports/<domain-timestamp>"; exit 1; }
 
-echo "[*] Using reports: $TARGET_RUN"
+echo "🔍 Processing: $(basename "$TARGET_RUN")"
 
-# 1) Aggregate with enhanced sensitive endpoint detection
-python3 scripts/enhanced_aggregate_reports.py --reports "$TARGET_RUN"
+# Extract domain and show basic info
+DOMAIN=$(basename "$TARGET_RUN" | cut -d'-' -f1)
+echo "🌐 Target: $DOMAIN"
+
+# Show basic scan info
+if [ -f "$TARGET_RUN/nmap.xml" ] || [ -f "$TARGET_RUN/nmap.txt" ]; then
+    echo "📡 Nmap scan completed"
+fi
+if [ -f "$TARGET_RUN/nikto.txt" ]; then
+    echo "🔍 Nikto scan completed"
+fi
+if [ -f "$TARGET_RUN/gobuster.txt" ]; then
+    echo "📂 Directory enumeration completed"
+fi
+if [ -f "$TARGET_RUN/ffuf.txt" ]; then
+    echo "🔍 ffuf scan completed"
+fi
+
+echo "⚙️  Processing scan results..."
+
+# 1) Aggregate with enhanced sensitive endpoint detection (silent)
+python3 scripts/enhanced_aggregate_reports.py --reports "$TARGET_RUN" >/dev/null 2>&1
 
 WL="worklists/$(basename "$TARGET_RUN")"
 mkdir -p "$WL" audit
 
-# 1.5) Detect Critical Findings
+# Show useful information
 echo ""
-echo "=== Critical Finding Analysis ==="
+echo "📊 SCAN SUMMARY:"
+echo "================"
+
+# Show hosts and ports
+if [ -f "$WL/hosts.txt" ] && [ -s "$WL/hosts.txt" ]; then
+    echo "🖥️  HOSTS & PORTS:"
+    cat "$WL/hosts.txt" | head -10
+    if [ "$(wc -l < "$WL/hosts.txt")" -gt 10 ]; then
+        echo "   ... and $(( $(wc -l < "$WL/hosts.txt") - 10 )) more hosts"
+    fi
+    echo ""
+else
+    echo "🖥️  HOSTS & PORTS: No nmap data available"
+    echo ""
+fi
+
+# Show CVEs
+if [ -f "$WL/cves.txt" ] && [ -s "$WL/cves.txt" ]; then
+    echo "🚨 VULNERABILITIES FOUND:"
+    cat "$WL/cves.txt" | head -5
+    if [ "$(wc -l < "$WL/cves.txt")" -gt 5 ]; then
+        echo "   ... and $(( $(wc -l < "$WL/cves.txt") - 5 )) more CVEs"
+    fi
+    echo ""
+fi
+
+# Show server info from nikto
+if [ -f "$TARGET_RUN/nikto.txt" ]; then
+    echo "🖥️  SERVER INFORMATION:"
+    grep -E "(Server:|OSVDB-|CVE-)" "$TARGET_RUN/nikto.txt" | head -5
+    echo ""
+fi
+
+# 1.5) Detect Critical Findings
 CRITICAL_FOUND=false
 if detect_critical_findings "$WL"; then
   CRITICAL_FOUND=true
@@ -153,76 +243,45 @@ check_zap_local() {
   return 1
 }
 
-# Run ZAP scans
-if check_docker_availability; then
-  echo "[*] Running ZAP baseline scans with Docker..."
+# Run ZAP scans (silent)
+if check_docker_availability >/dev/null 2>&1; then
+  echo "🔍 Running ZAP scans..."
   while read -r url; do
     [[ -z "$url" || "$url" =~ ^/ ]] && continue
     safe="$(echo "$url" | sed 's/[:\/]/_/g')"
-    echo "[*] ZAP baseline: $url"
     docker run --rm -v "$(pwd)":/zap/wrk/ -t owasp/zap2docker-stable \
-      zap-baseline.py -t "$url" -r "$ZAP_OUT/${safe}.html" || true
+      zap-baseline.py -t "$url" -r "$ZAP_OUT/${safe}.html" >/dev/null 2>&1 || true
   done < "$WL/urls.txt"
-elif check_zap_local; then
-  echo "[*] Running ZAP baseline scans with local installation..."
+elif check_zap_local >/dev/null 2>&1; then
+  echo "🔍 Running ZAP scans..."
   while read -r url; do
     [[ -z "$url" || "$url" =~ ^/ ]] && continue
     safe="$(echo "$url" | sed 's/[:\/]/_/g')"
-    echo "[*] ZAP baseline: $url"
-    zaproxy -cmd -quickurl "$url" -quickout "$ZAP_OUT/${safe}.html" || true
+    zaproxy -cmd -quickurl "$url" -quickout "$ZAP_OUT/${safe}.html" >/dev/null 2>&1 || true
   done < "$WL/urls.txt"
-else
-  echo "[!] Neither Docker nor local ZAP available; skipping ZAP runs."
-  echo "[*] To fix Docker: sudo usermod -aG docker \$USER && newgrp docker"
-  echo "[*] To install ZAP locally: sudo apt install zaproxy"
 fi
 
-# 3) Optional intrusive steps (guarded)
-read -r -p "Run INTRUSIVE scans? (sqlmap on params + ZAP full per URL) [y/N]: " INTR
-INTR=${INTR:-N}
+# Skip intrusive scans by default (can be enabled manually)
+# Uncomment the following lines if you want to run intrusive scans:
+# read -r -p "Run INTRUSIVE scans? (sqlmap on params + ZAP full per URL) [y/N]: " INTR
+# INTR=${INTR:-N}
+# if [[ "${INTR,,}" =~ ^y ]]; then
+#   # Intrusive scans would go here
+# fi
 
-if [[ "${INTR,,}" =~ ^y ]]; then
-  # ZAP full (intrusive)
-  if command -v docker >/dev/null 2>&1; then
-    while read -r url; do
-      [[ -z "$url" || "$url" =~ ^/ ]] && continue
-      safe="$(echo "$url" | sed 's/[:\/]/_/g')"
-      echo "[*] ZAP full: $url"
-      docker run --rm -v "$(pwd)":/zap/wrk/ -t owasp/zap2docker-stable \
-        zap-full-scan.py -t "$url" -r "$ZAP_OUT/${safe}-full.html" || true
-    done < "$WL/urls.txt"
-  fi
-
-  # sqlmap on parameterized URLs
-  SQL_OUT="audit/$(basename "$TARGET_RUN")-sqlmap"
-  mkdir -p "$SQL_OUT"
-  if [ -s "$WL/params.txt" ]; then
-    while read -r purl; do
-      [ -z "$purl" ] && continue
-      safe="$(echo "$purl" | sed 's/[:\/?&=]/_/g')"
-      echo "[*] sqlmap: $purl"
-      sqlmap -u "$purl" --batch --level=3 --risk=2 -o --output-dir="$SQL_OUT/$safe" || true
-    done < "$WL/params.txt"
-  else
-    echo "[*] No parameterized URLs found for sqlmap."
-  fi
-fi
-
-# 4) CVE hints → SearchSploit lookup (non-intrusive)
+# 4) CVE hints → SearchSploit lookup (silent)
 EXP_OUT="audit/$(basename "$TARGET_RUN")-exploits.txt"
 : > "$EXP_OUT"
 if command -v searchsploit >/dev/null 2>&1 && [ -s "$WL/cves.txt" ]; then
-  echo "[*] SearchSploit lookup…" | tee -a "$EXP_OUT"
+  echo "🔍 Searching for exploits..."
   while read -r line; do
     [ -z "$line" ] && continue
-    echo -e "\n### $line" | tee -a "$EXP_OUT"
-    searchsploit "$line" | tee -a "$EXP_OUT" || true
+    echo -e "\n### $line" >> "$EXP_OUT"
+    searchsploit "$line" >> "$EXP_OUT" 2>/dev/null || true
   done < "$WL/cves.txt"
-else
-  echo "[*] SearchSploit not available or no CVEs captured; skipping." | tee -a "$EXP_OUT"
 fi
 
-# 5) Minimal audit markdown
+# 5) Generate audit markdown (silent)
 MD="audit/$(basename "$TARGET_RUN")-summary.md"
 AGG="$WL/aggregate.json"
 echo "# GooberScan Follow-up Summary — $(basename "$TARGET_RUN")" > "$MD"
@@ -254,60 +313,44 @@ else
 fi
 echo -e "\n## Artifacts\n" >> "$MD"
 echo "- ZAP reports: \`$ZAP_OUT/\`" >> "$MD"
-echo "- sqlmap outputs: \`${SQL_OUT:-N/A}\`" >> "$MD"
 echo "- SearchSploit results: \`$EXP_OUT\`" >> "$MD"
 
 # 6) Auto-Chain Critical Findings
-echo ""
-echo "=== Auto-Chaining Critical Findings ==="
-
 # Extract target domain from run name
 TARGET_DOMAIN=$(basename "$TARGET_RUN" | cut -d'-' -f1)
 
 # Generate Metasploit RC if CVEs found
 if [ -s "$WL/cves.txt" ]; then
-  echo "[*] Generating targeted Metasploit RC file..."
-  python3 scripts/gen_msf_rc.py "$WL" "$TARGET_DOMAIN"
+  echo "🎯 Generating targeted Metasploit RC..."
+  python3 scripts/gen_msf_rc.py "$WL" "$TARGET_DOMAIN" >/dev/null 2>&1
   MSF_RC="audit/${TARGET_DOMAIN}-auto.rc"
   if [ -f "$MSF_RC" ]; then
     print_alert_box "🎯 TARGETED METASPLOIT RC GENERATED" "File: $MSF_RC\nOnly includes modules for detected CVEs\nTo run: msfconsole -r $MSF_RC"
-    echo "[*] To run: msfconsole -r $MSF_RC"
   fi
-else
-  echo "[*] No CVEs detected - skipping Metasploit RC generation"
 fi
 
 # Generate BurpSuite config if URLs found
 if [ -s "$WL/urls.txt" ]; then
-  echo "[*] Generating BurpSuite configuration..."
-  python3 scripts/burp_integration.py "$WL/urls.txt" "$TARGET_DOMAIN"
-  BURP_CONFIG="burp/${TARGET_DOMAIN}_config.json"
-  if [ -f "$BURP_CONFIG" ]; then
-    echo "[+] BurpSuite config created: $BURP_CONFIG"
-    echo "[*] Import URLs from: burp/${TARGET_DOMAIN}_urls.txt"
-  fi
+  echo "🔧 Generating BurpSuite configuration..."
+  python3 scripts/burp_integration.py "$WL/urls.txt" "$TARGET_DOMAIN" >/dev/null 2>&1
 fi
 
 # Generate comprehensive security summary
-echo ""
-echo "=== Generating Security Summary ==="
-python3 scripts/security_summary.py "$WL"
+echo "📋 Generating security summary..."
+python3 scripts/security_summary.py "$WL" >/dev/null 2>&1
 
 # Final Summary
 echo ""
-echo "[✓] Pipeline complete."
-echo "Worklists: $WL"
-echo "Audit: $MD"
-
-if [ "$CRITICAL_FOUND" = true ]; then
-  echo ""
-  print_alert_box "CRITICAL FINDINGS DETECTED - REVIEW REQUIRED"
-  echo "[*] Check audit summary: $MD"
-  echo "[*] Review worklists for manual testing"
-  if [ -f "audit/${TARGET_DOMAIN}-auto.rc" ]; then
-    echo "[*] Metasploit RC ready: audit/${TARGET_DOMAIN}-auto.rc"
-  fi
-  if [ -f "burp/${TARGET_DOMAIN}_config.json" ]; then
-    echo "[*] BurpSuite config ready: burp/${TARGET_DOMAIN}_config.json"
-  fi
+echo "✅ ANALYSIS COMPLETE"
+echo "==================="
+echo "📁 Results: worklists/$(basename "$WL")/"
+echo "📋 Report: audit/$(basename "$WL")-summary.md"
+if [ -f "audit/${TARGET_DOMAIN}-auto.rc" ]; then
+  echo "🎯 Metasploit: audit/${TARGET_DOMAIN}-auto.rc"
 fi
+if [ -f "burp/${TARGET_DOMAIN}_config.json" ]; then
+  echo "🔧 BurpSuite: burp/${TARGET_DOMAIN}_config.json"
+fi
+echo "🔍 ZAP Results: audit/$(basename "$WL")-zap/"
+echo ""
+echo "🚀 Ready for manual testing!"

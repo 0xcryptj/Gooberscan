@@ -1,138 +1,134 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Simple idempotent installer for Ubuntu/Debian environments.
-# RUN THIS WITH SUDO: sudo ./install-deps.sh
-# It will:
-# - apt install system packages
-# - install pipx & ffuf & seclists
-# - create a Python venv at ~/secenv for optional Python tools
-# - configure gem to install user gems (wpScan)
-# - pull Docker images for ZAP and WPScan (optional)
-#
-# Notes:
-# - Run on Ubuntu/Debian systems. On other distros adjust package manager lines.
-# - You will be added to docker group (log out/in to apply).
+# AgentSec dependency installer for Debian / Ubuntu / WSL.
+# Installs the baseline deterministic tools used by AgentSec.
+# Optional cross-ecosystem scanners are installed when a clean package path exists.
 
-# ensure script is run as root
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run with sudo: sudo $0"
+if [ "${EUID}" -ne 0 ]; then
+  echo "Run with sudo: sudo ./install-deps.sh"
   exit 1
 fi
 
+if ! command -v apt-get >/dev/null 2>&1; then
+  echo "This installer currently supports Debian/Ubuntu/WSL systems using apt."
+  echo "AgentSec itself can still be used elsewhere; install the tools manually."
+  exit 1
+fi
+
+REAL_USER="${SUDO_USER:-root}"
+REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6)"
 export DEBIAN_FRONTEND=noninteractive
 
-echo "Updating apt..."
-apt update -y
+echo "[AgentSec] Updating package metadata..."
+apt-get update
 
-echo "Installing core packages..."
-apt install -y \
-  build-essential \
+echo "[AgentSec] Installing baseline audit tools..."
+apt-get install -y \
+  ca-certificates \
   curl \
   wget \
   unzip \
   jq \
   git \
+  build-essential \
   python3 \
   python3-venv \
   python3-pip \
+  pipx \
+  nodejs \
+  npm \
   nmap \
   nikto \
   gobuster \
-  dirb \
   sqlmap \
   lynis \
-  ruby-full \
-  libcurl4-openssl-dev \
-  openjdk-17-jre-headless \
-  docker.io
+  docker.io \
+  ruby-full
 
-# Install ffuf (Go-based web fuzzer)
-echo "Installing ffuf..."
+# ffuf is packaged by many current Debian/Ubuntu releases. Keep it optional so
+# one missing package does not break the entire AgentSec setup.
 if ! command -v ffuf >/dev/null 2>&1; then
-  FFUF_VERSION="2.1.0"
-  wget -O /tmp/ffuf.tar.gz "https://github.com/ffuf/ffuf/releases/download/v${FFUF_VERSION}/ffuf_${FFUF_VERSION}_linux_amd64.tar.gz"
-  tar -xzf /tmp/ffuf.tar.gz -C /tmp/
-  mv /tmp/ffuf /usr/local/bin/
-  chmod +x /usr/local/bin/ffuf
-  rm /tmp/ffuf.tar.gz
+  echo "[AgentSec] Attempting to install ffuf..."
+  apt-get install -y ffuf 2>/dev/null || echo "[AgentSec] ffuf is unavailable from this apt repository; Gobuster will be used instead."
 fi
 
-# Install SecLists
-echo "Installing SecLists..."
-if [ ! -d "/usr/share/seclists" ]; then
-  git clone https://github.com/danielmiessler/SecLists.git /usr/share/seclists
-  chmod -R 755 /usr/share/seclists
+# SecLists provides the conservative common web-content list used by AgentSec.
+if [ ! -f /usr/share/seclists/Discovery/Web-Content/common.txt ]; then
+  echo "[AgentSec] Installing SecLists..."
+  if apt-cache show seclists >/dev/null 2>&1; then
+    apt-get install -y seclists
+  else
+    rm -rf /usr/share/seclists.tmp
+    git clone --depth 1 https://github.com/danielmiessler/SecLists.git /usr/share/seclists.tmp
+    mv /usr/share/seclists.tmp /usr/share/seclists
+    chmod -R a+rX /usr/share/seclists
+  fi
 fi
 
-# Update sqlmap to latest version
-echo "Updating sqlmap to latest version..."
-if command -v sqlmap >/dev/null 2>&1; then
-  echo "[*] Current sqlmap version:"
-  sqlmap --version 2>/dev/null | head -1 || true
-  echo "[*] Updating sqlmap..."
-  pip install --upgrade sqlmap --break-system-packages 2>/dev/null || \
-  pip3 install --upgrade sqlmap --break-system-packages 2>/dev/null || \
-  echo "[!] Failed to update sqlmap - may need manual update"
+# Install Python CLI scanners in the actual user's isolated pipx environment.
+if [ "$REAL_USER" != "root" ]; then
+  echo "[AgentSec] Installing isolated Python scanners for $REAL_USER..."
+  sudo -H -u "$REAL_USER" pipx ensurepath >/dev/null 2>&1 || true
+  sudo -H -u "$REAL_USER" pipx install semgrep 2>/dev/null || sudo -H -u "$REAL_USER" pipx upgrade semgrep 2>/dev/null || true
+  sudo -H -u "$REAL_USER" pipx install pip-audit 2>/dev/null || sudo -H -u "$REAL_USER" pipx upgrade pip-audit 2>/dev/null || true
 else
-  echo "[*] Installing latest sqlmap..."
-  pip install sqlmap --break-system-packages 2>/dev/null || \
-  pip3 install sqlmap --break-system-packages 2>/dev/null || \
-  echo "[!] Failed to install sqlmap via pip"
+  pipx ensurepath >/dev/null 2>&1 || true
+  pipx install semgrep 2>/dev/null || pipx upgrade semgrep 2>/dev/null || true
+  pipx install pip-audit 2>/dev/null || pipx upgrade pip-audit 2>/dev/null || true
 fi
 
-# Ensure docker service running
-systemctl enable --now docker || true
+# Docker is used for OWASP ZAP. Group membership is a high-privilege capability,
+# so AgentSec does NOT automatically add users to the docker group.
+echo "[AgentSec] Enabling Docker service when systemd is available..."
+systemctl enable --now docker 2>/dev/null || true
 
-# add current user to docker group (note: needs logout/login)
-if [ -n "${SUDO_USER:-}" ]; then
-  usermod -aG docker "$SUDO_USER" || true
+if command -v docker >/dev/null 2>&1; then
+  echo "[AgentSec] Pulling OWASP ZAP image (best effort)..."
+  docker pull ghcr.io/zaproxy/zaproxy:stable 2>/dev/null || true
 fi
 
-# pipx (preferred for Python CLI tools)
-echo "Installing pipx and ensuring path..."
-# Install pipx via apt to avoid externally-managed environment issues
-apt install -y pipx
-python3 -m pipx ensurepath
+# Make repository entry points executable when the installer is run from the repo.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+chmod +x "$SCRIPT_DIR/agentsec" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/scripts/agentsec.py" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/scripts/architecture_inventory.py" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/scripts/local_server_audit.sh" 2>/dev/null || true
 
-# create Python venv for optional Python tools and common libs
-VENV_DIR="/home/${SUDO_USER:-root}/secenv"
-if [ ! -d "$VENV_DIR" ]; then
-  echo "Creating Python venv at $VENV_DIR..."
-  sudo -u "${SUDO_USER:-root}" python3 -m venv "$VENV_DIR"
-  sudo -u "${SUDO_USER:-root}" "$VENV_DIR/bin/python" -m pip install --upgrade pip setuptools wheel
-fi
+cat <<EOF
 
-# Ruby gem: install WPScan into user's gem home (avoid sudo gem)
-echo "Configuring user gem directory for ${SUDO_USER:-root}..."
-USER_HOME=$(eval echo "~${SUDO_USER:-root}")
-GEM_HOME="${USER_HOME}/.gem"
-mkdir -p "$GEM_HOME"
-chown -R "${SUDO_USER:-root}":"${SUDO_USER:-root}" "$GEM_HOME"
-# Write into the user's shell profile so gem binaries are in PATH for interactive shells
-PROFILE_FILE="${USER_HOME}/.profile"
-grep -q 'GEM_HOME' "$PROFILE_FILE" 2>/dev/null || cat >> "$PROFILE_FILE" <<'EOF'
+AgentSec baseline installation complete.
 
-# Ruby gems installed to user gem dir
-export GEM_HOME="$HOME/.gem"
-export PATH="$HOME/.gem/bin:$PATH"
+Installed/attempted:
+  - Python 3 + pipx
+  - Node.js + npm
+  - Nmap
+  - Nikto
+  - Gobuster / ffuf when packaged
+  - sqlmap
+  - Lynis
+  - Docker + OWASP ZAP image
+  - Semgrep (pipx)
+  - pip-audit (pipx)
+  - SecLists
+
+Optional tools AgentSec can also consume if you install them:
+  - OSV-Scanner
+  - Trivy
+  - Gitleaks
+  - cargo-audit
+
+Security note:
+  Docker group membership is effectively root-equivalent on typical Docker hosts.
+  This installer intentionally does not add $REAL_USER to the docker group.
+
+Test AgentSec:
+  cd "$SCRIPT_DIR"
+  ./agentsec --help
+  ./agentsec repo .
+
+If pipx-installed commands are not visible yet, start a new shell or add:
+  $REAL_HOME/.local/bin
+
+to your PATH.
 EOF
-
-# Install wpscan (user gem) as the non-root user
-echo "Installing WPScan (user gem) — this may take a moment..."
-# Use su to run gem install as the non-root user if available
-if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
-  su - "${SUDO_USER}" -c "gem install wpscan --no-document" || echo "Warning: gem install wpscan failed for ${SUDO_USER}"
-else
-  gem install wpscan --no-document || echo "Warning: gem install wpscan failed (if running in container, consider running as real user)"
-fi
-
-# Docker images for ZAP and WPScan (speeds up first run)
-echo "Pulling Docker images (owasp/zap2docker-stable, wpscanteam/wpscan)..."
-docker pull owasp/zap2docker-stable:latest || true
-docker pull wpscanteam/wpscan || true
-
-echo "Installation finished."
-echo "If you were not previously in the docker group, log out and back in to use docker without sudo."
-echo "Python venv available at $VENV_DIR (activate with: source $VENV_DIR/bin/activate)"
-echo "If wpscan command is not found in a new shell, ensure ~/.gem/bin is in your PATH (restart shell)."

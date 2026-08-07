@@ -1,4 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ "${1:-}" = "repo" ]; then
+  TARGET="."
+  for arg in "${@:2}"; do
+    if [[ "$arg" != -* ]]; then
+      TARGET="$arg"
+      break
+    fi
+  done
+
+  mkdir -p "$ROOT/.agentsec"
+  ARCH_OUT="$ROOT/.agentsec/architecture-latest.json"
+  echo "[AgentSec] Mapping repository architecture and security design signals..."
+  python3 "$ROOT/scripts/architecture_inventory.py" "$TARGET" --output "$ARCH_OUT" || \
+    echo "[AgentSec] Architecture inventory could not complete; continuing with deterministic checks."
+  echo "[AgentSec] Architecture inventory: $ARCH_OUT"
+fi
+
 exec python3 "$ROOT/scripts/agentsec.py" "$@"

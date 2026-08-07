@@ -1,25 +1,40 @@
-# Gooberscan
+# AgentSec generated security output
+.agentsec/
+.agentsec-architecture.json
+architecture.json
 
-# === scan outputs (generated) ===
+# Legacy Gooberscan outputs kept ignored during migration
 reports/
 worklists/
 audit/
 burp/
-
-# Tool-specific output dirs (add more as needed)
 output/
 out/
 
-# === temporary files ===
+# Sensitive/common local environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Temporary files
 *.tmp
 *.log
 *.pid
 
-# === python ===
+# Python
 __pycache__/
 *.py[cod]
+.venv/
+venv/
 
-# === OS / IDE ===
+# Node
+node_modules/
+
+# OS / IDE
 .DS_Store
 Thumbs.db
 .vscode/
@@ -27,5 +42,5 @@ Thumbs.db
 *.swp
 *.swo
 
-# === docker volumes / local state ===
+# Docker/local state
 docker-data/

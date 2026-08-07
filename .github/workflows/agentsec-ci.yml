@@ -55,10 +55,4 @@ jobs:
           mkdir -p /tmp/agentsec
           cp SKILL.md /tmp/agentsec/
           cp -r scripts references /tmp/agentsec/
-          SKILLS_REF_BIN="$(python - <<'PY'
-          import os
-          import sysconfig
-          print(os.path.join(sysconfig.get_path('scripts'), 'skills-ref'))
-          PY
-          )"
-          "$SKILLS_REF_BIN" validate /tmp/agentsec
+          agentskills validate /tmp/agentsec

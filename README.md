@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="assets/agentsec-banner.jpg" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
+  <img src="assets/agentsec-hero.svg" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
 </p>
 
 <h1 align="center">AgentSec</h1>
-<p align="center"><strong>Agentic Security Auditing &amp; Remediation</strong></p>
+<p align="center"><strong>Security for AI-powered development.</strong></p>
 
 <p align="center">
-  AgentSec is an open-source security engineering skill and toolkit for AI coding agents. It audits applications, repositories, web surfaces, Linux servers, dependencies, architecture, identity, and deployment configuration, then helps reason about and implement defensive fixes.
+  AgentSec gives AI coding agents a security brain. It checks your code, apps, packages, and servers, points out weak spots, suggests better protection, and helps fix what it finds.
 </p>
 
 <p align="center">
@@ -15,9 +15,8 @@
   <a href="#features">Features</a> ·
   <a href="docs/INSTALLATION.md">Installation</a> ·
   <a href="docs/USAGE.md">Usage</a> ·
-  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a> ·
-  <a href="LICENSE">License</a>
+  <a href="#advanced">Advanced</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
@@ -29,7 +28,7 @@
 </p>
 
 > [!IMPORTANT]
-> AgentSec is for defensive development and authorized security assessment. Only scan remote systems you own or are explicitly permitted to assess. Active web validation is opt-in.
+> AgentSec is for defensive development and authorized security assessment. Only scan systems you own or have permission to test.
 
 ---
 
@@ -39,22 +38,32 @@
 <tr>
 <td width="50%" valign="top">
 
-✅ <strong>Application Security</strong> - OWASP-oriented review for injection, XSS, SSRF, CSRF, IDOR, auth/session flaws, unsafe uploads, and more.<br><br>
-✅ <strong>Server &amp; Infrastructure Audits</strong> - Linux patch state, SSH, firewall, listeners, permissions, Docker, databases, web roots, and Lynis.<br><br>
-✅ <strong>Network Scanning &amp; Enumeration</strong> - Authorized Nmap service discovery and defensive surface review.<br><br>
-✅ <strong>Cloud &amp; Misconfiguration Checks</strong> - Cloudflare, edge controls, public exposure, TLS, caching boundaries, and deployment mistakes.<br><br>
-✅ <strong>Supply Chain Security</strong> - npm advisories, dependency trees, package signatures, lockfiles, install scripts, OSV, Trivy, pip-audit, cargo-audit.<br><br>
-✅ <strong>Secrets &amp; Sensitive Data Detection</strong> - credentials, keys, environment files, backups, database dumps, and deployment artifacts.
+### 🔍 Deep Audits
+Review apps, source code, servers, networks, cloud setups, and dependencies from one security workflow.
+
+### 📦 Package Safety
+Find vulnerable or suspicious packages and help choose safer upgrades without blindly breaking the project.
+
+### 🔐 Secrets & Exposure
+Look for leaked credentials, exposed files, backups, public directories, risky services, and other things that should not be reachable.
+
+### 🧠 Security Architecture
+Understand how the project is built before recommending changes, instead of throwing generic scanner warnings at it.
 
 </td>
 <td width="50%" valign="top">
 
-✅ <strong>Threat Modeling &amp; Architecture Analysis</strong> - trust boundaries, identities, data flows, service separation, tenant isolation, and blast radius.<br><br>
-✅ <strong>Principle of Least Privilege Advisor</strong> - database roles, workers, CI tokens, cloud IAM, OAuth/API scopes, and privileged paths.<br><br>
-✅ <strong>Automated Remediation &amp; Hardening</strong> - conservative code/config fixes with focused verification and regression checks.<br><br>
-✅ <strong>Directory / Path Exposure Discovery</strong> - Gobuster and ffuf findings are treated as deployment and access-control problems, not obscurity problems.<br><br>
-✅ <strong>MFA / Passkey / Step-up Review</strong> - evaluates privileged workflows without falsely assuming external IdP controls are absent.<br><br>
-✅ <strong>AI Agent Compatible</strong> - designed for Claude Code, Codex, Cursor, GitHub Copilot, and Agent Skills-compatible clients.
+### 🛡️ Smarter Protection
+Suggest practical improvements such as least privilege, stronger login protection, safer permissions, rate limits, and better separation between services.
+
+### 🛠️ Guided Fixes
+Help make conservative code and configuration changes, then verify the relevant security issue again.
+
+### ☁️ Cloud & Edge Review
+Recognize infrastructure such as Cloudflare and suggest useful protections already available in the stack.
+
+### 🤖 Built for Agents
+Use the same AgentSec skill with Claude Code, Codex, Cursor, GitHub Copilot, and other Agent Skills-compatible clients.
 
 </td>
 </tr>
@@ -64,79 +73,137 @@
 
 ## 🚀 Quick Start
 
-### One-line install for coding agents
+### Give AgentSec to your coding agents
 
 ```bash
 npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -g -y
 ```
 
-### Repository audit
+Then ask your agent things like:
+
+```text
+Use AgentSec to audit this project and explain the biggest security risks.
+```
+
+```text
+Use AgentSec to review this repo, suggest fixes, and safely implement the high-confidence ones.
+```
+
+### Run AgentSec directly
 
 ```bash
 ./agentsec repo .
 ```
 
-### Repository audit with conservative fixes
-
-```bash
-./agentsec repo . --fix
-```
-
-### Local Linux server audit
-
 ```bash
 ./agentsec server --local
 ```
-
-### Authorized remote server audit
-
-```bash
-./agentsec server --target server.example.com --authorized
-```
-
-### Authorized web audit
 
 ```bash
 ./agentsec web https://staging.example.com --authorized
 ```
 
-### Explicitly authorized active validation
-
-```bash
-./agentsec web https://staging.example.com --authorized --active
-```
-
 ---
 
-## How AgentSec Works
+## How AgentSec Thinks
 
 ```text
-RECON  ->  MODEL  ->  ANALYZE  ->  VERIFY  ->  REMEDIATE  ->  RETEST
+DISCOVER  ->  UNDERSTAND  ->  AUDIT  ->  VERIFY  ->  FIX  ->  RETEST
 ```
 
-AgentSec combines deterministic security tools with architecture-aware reasoning. Scanner output is evidence, not a verdict. The agent is instructed to correlate findings with the code, configuration, runtime architecture, and external-provider boundaries before assigning severity or making changes.
+A normal scanner might say that a port is open or a package has a vulnerability. AgentSec is designed to ask the next question: **why is it exposed, what could happen, what is the safest fix, and how do we prove the fix worked?**
 
 <table>
 <tr>
-<td width="33%" align="center"><strong>🔍 AUDIT</strong><br><br>Application, server, network, cloud, dependencies, code</td>
-<td width="33%" align="center"><strong>🕵️ THREAT MODEL</strong><br><br>Architecture, trust boundaries, identities, attack surface</td>
-<td width="33%" align="center"><strong>🛡️ REMEDIATE</strong><br><br>Fix root causes, harden configuration, verify changes</td>
+<td width="33%" align="center"><strong>🔍 AUDIT</strong><br><br>Find weak spots and exposed surfaces.</td>
+<td width="33%" align="center"><strong>🕵️ REASON</strong><br><br>Understand architecture and real-world risk.</td>
+<td width="33%" align="center"><strong>🛡️ REMEDIATE</strong><br><br>Fix root causes and verify the result.</td>
 </tr>
 </table>
 
-### Security intelligence
+---
 
-AgentSec reasons about controls such as:
+## Advanced
 
-- least privilege for database users, workers, CI, cloud IAM, API keys, and service accounts
-- MFA, passkeys, and step-up authentication for high-impact operations
-- Cloudflare WAF, rate limiting, Turnstile, Full (strict) TLS, origin protection, and safe caching boundaries
-- compromised or vulnerable npm and other ecosystem packages
-- exposed directories, backups, dotfiles, source maps, logs, database dumps, and admin surfaces
-- SQL injection, XSS, SSRF, path traversal, CSRF, IDOR, command injection, unsafe uploads, auth/session weaknesses, and secrets
-- server hardening, SSH policy, firewalling, open services, Docker privilege, filesystem permissions, and database exposure
+This is where AgentSec gets more technical. The skill can reason across the application, host, dependency, identity, and infrastructure layers instead of treating them as separate checklists.
 
-`robots.txt` and `llms.txt` are treated as crawler/discoverability policy, not access control. `security.txt` is treated as an operational disclosure control.
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Application security
+- SQL injection and unsafe database access
+- XSS and output encoding
+- SSRF and unsafe outbound requests
+- command injection and path traversal
+- CSRF, IDOR, broken authorization, and session weaknesses
+- unsafe uploads, insecure crypto, and secret handling
+
+### Supply chain
+- `npm audit` and dependency-tree analysis
+- npm package signature checks when supported
+- lockfile integrity and suspicious dependency changes
+- install and postinstall scripts
+- OSV-Scanner, Trivy, pip-audit, cargo-audit, and related tools
+- response steps for confirmed malicious or compromised packages
+
+### Server security
+- patch state and vulnerable services
+- SSH and firewall policy
+- listening ports and database/cache exposure
+- SUID/SGID and sensitive permissions
+- systemd and cron surfaces
+- Docker privileges and socket exposure
+- Nginx/Apache document-root and configuration review
+
+</td>
+<td width="50%" valign="top">
+
+### Architecture & least privilege
+- trust boundaries and data flows
+- runtime vs migration database identities
+- worker and service-account permissions
+- CI/CD token scope
+- cloud IAM and API/OAuth scopes
+- tenant isolation and privileged operations
+
+### Identity
+- MFA, passkeys, and WebAuthn opportunities
+- step-up authentication for high-impact actions
+- session lifetime and recovery-flow review
+- privileged account separation
+- external IdP controls marked as review-needed when they cannot be verified from source
+
+### Cloudflare & edge
+- managed WAF opportunities
+- route-specific rate limits
+- Turnstile and abuse-sensitive forms
+- Full (strict) TLS
+- origin lockdown and Authenticated Origin Pulls where appropriate
+- cache bypass for personalized or authorization-sensitive responses
+
+### Exposure testing
+- Nmap service discovery
+- Gobuster and ffuf path discovery
+- Nikto and ZAP baseline checks
+- controlled active web validation only with explicit authorization
+
+</td>
+</tr>
+</table>
+
+### Finding quality
+
+AgentSec separates findings into four classes so everything does not become a red alert:
+
+| Class | Meaning |
+| --- | --- |
+| **Confirmed vulnerability** | Evidence shows an unsafe condition. |
+| **Security design gap** | The architecture has a concrete weakness or missing control. |
+| **Security opportunity** | A defense-in-depth improvement would reduce risk. |
+| **Review needed** | The repo suggests a possible issue, but runtime or provider configuration must be checked. |
+
+`robots.txt` and `llms.txt` are treated as crawler/discoverability files, not access control. `security.txt` is treated as a useful disclosure and operational-security control.
 
 ---
 
@@ -146,18 +213,18 @@ AgentSec reasons about controls such as:
 <tr>
 <td width="50%" valign="top">
 
-📘 <a href="docs/GETTING_STARTED.md"><strong>GETTING_STARTED.md</strong></a> - first steps and first audit<br><br>
-⚡ <a href="docs/QUICKSTART.md"><strong>QUICKSTART.md</strong></a> - fastest install and usage path<br><br>
-📦 <a href="docs/INSTALLATION.md"><strong>INSTALLATION.md</strong></a> - agent and scanner installation<br><br>
-⌨️ <a href="docs/USAGE.md"><strong>USAGE.md</strong></a> - commands, flags, modes, examples
+📘 <a href="docs/GETTING_STARTED.md"><strong>GETTING_STARTED.md</strong></a> - overview and first audit<br><br>
+⚡ <a href="docs/QUICKSTART.md"><strong>QUICKSTART.md</strong></a> - fastest setup path<br><br>
+📦 <a href="docs/INSTALLATION.md"><strong>INSTALLATION.md</strong></a> - installation and requirements<br><br>
+⌨️ <a href="docs/USAGE.md"><strong>USAGE.md</strong></a> - commands, modes, and examples
 
 </td>
 <td width="50%" valign="top">
 
-🏗️ <a href="docs/ARCHITECTURE.md"><strong>ARCHITECTURE.md</strong></a> - system design and agent workflow<br><br>
-🔐 <a href="docs/SECURITY_CONCEPTS.md"><strong>SECURITY_CONCEPTS.md</strong></a> - threat model and controls<br><br>
-🛠️ <a href="docs/REMEDIATION_GUIDE.md"><strong>REMEDIATION_GUIDE.md</strong></a> - how fixes are applied and verified<br><br>
-🧪 <a href="docs/DEVELOPMENT.md"><strong>DEVELOPMENT.md</strong></a> - extending and contributing
+🏗️ <a href="docs/ARCHITECTURE.md"><strong>ARCHITECTURE.md</strong></a> - how AgentSec works<br><br>
+🔐 <a href="docs/SECURITY_CONCEPTS.md"><strong>SECURITY_CONCEPTS.md</strong></a> - deeper security concepts<br><br>
+🛠️ <a href="docs/REMEDIATION_GUIDE.md"><strong>REMEDIATION_GUIDE.md</strong></a> - fixes and verification<br><br>
+🧪 <a href="docs/DEVELOPMENT.md"><strong>DEVELOPMENT.md</strong></a> - contributing and extending
 
 </td>
 </tr>
@@ -167,19 +234,17 @@ AgentSec reasons about controls such as:
 
 ## Reports
 
-AgentSec writes audit evidence to:
+AgentSec stores audit evidence under:
 
 ```text
 .agentsec/reports/<scope>-<timestamp>/
 ```
 
-Each run preserves raw tool output plus `summary.json` and `summary.md`. Generated audit output is gitignored because it may contain sensitive information.
+Raw scanner output and summaries are kept together so both humans and agents can see what actually happened. Generated audit output is gitignored because it may contain sensitive information.
 
 ---
 
-## Agent Skill
-
-The repository follows the shared `SKILL.md` Agent Skills format. `SKILL.md` contains the security-engineering behavior, while `scripts/` provides deterministic evidence collection and `references/` provides progressively loaded security playbooks.
+## Project Layout
 
 ```text
 AgentSec/
@@ -193,10 +258,6 @@ AgentSec/
 └── CONTRIBUTING.md
 ```
 
----
-
-## Security & Contributions
-
-Read [SECURITY.md](SECURITY.md) for the disclosure policy and security boundaries. Contributions are welcome through [CONTRIBUTING.md](CONTRIBUTING.md).
+Read [SECURITY.md](SECURITY.md) for the disclosure policy and [CONTRIBUTING.md](CONTRIBUTING.md) to contribute.
 
 <p align="center"><strong>Audit. Reason. Remediate. Verify.</strong></p>

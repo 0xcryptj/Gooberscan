@@ -1,6 +1,18 @@
 # Install AgentSec
 
-Open your coding agent and paste:
+The polished one-line installer installs AgentSec as a global skill for supported coding agents:
+
+```bash
+curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/0xcryptj/AgentSec/main/install.sh | bash
+```
+
+Prefer to inspect the script first? Run it locally after cloning:
+
+```bash
+./install.sh
+```
+
+Or use the underlying skills CLI directly:
 
 ```bash
 npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -g -y

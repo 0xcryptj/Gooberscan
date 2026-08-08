@@ -56,6 +56,8 @@ npx skills remove agentsec -y
 
 The `skills` CLI resolves the correct skill locations for supported agents. Examples include agent-specific skill directories for Claude Code, Codex, Cursor and other Agent Skills-compatible clients. Prefer the CLI instead of maintaining separate copies by hand.
 
+The wildcard installer is intentionally future-friendly: it targets every agent supported by the installed `skills` CLI. Common explicit targets include `codex`, `claude-code`, `cursor`, `cline` and `amp`.
+
 If an agent does not discover the skill:
 
 1. confirm `npx skills list` shows `agentsec`

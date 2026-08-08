@@ -51,3 +51,16 @@ Before installing or updating AgentSec in a sensitive environment:
 - review any remediation patch before deploying it to production
 
 AgentSec intentionally avoids automatically adding users to the Docker group because Docker socket/group access is typically highly privileged.
+
+## Installation security model
+
+The quick installer is a convenience wrapper around the `skills` CLI. It installs the `agentsec` skill for the selected agent scope; it does not require root and does not enable remote scanning.
+
+For reproducible or high-assurance environments:
+
+1. inspect the repository and installer source
+2. install from a reviewed release tag or commit instead of `main`
+3. verify the installed `SKILL.md` before using it
+4. grant the coding agent only the filesystem, network and command permissions required for the audit
+
+The optional `install-deps.sh` script is separate because it installs operating-system packages and may require `sudo`. Review it before use and run it only on supported Debian, Ubuntu or WSL systems.

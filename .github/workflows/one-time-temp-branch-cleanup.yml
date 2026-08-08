@@ -1,0 +1,23 @@
+name: Remove temporary hero branches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-temp-branch-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete temporary hero branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for branch in hero-binary-check hero-exact-import; do
+            gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$branch" || true
+          done

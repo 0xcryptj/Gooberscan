@@ -3,14 +3,6 @@
 .agentsec-architecture.json
 architecture.json
 
-# Legacy Gooberscan outputs kept ignored during migration
-reports/
-worklists/
-audit/
-burp/
-output/
-out/
-
 # Sensitive/common local environment files
 .env
 .env.*

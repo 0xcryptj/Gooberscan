@@ -19,6 +19,13 @@ AgentSec currently uses several complementary sources:
 - **ClamAV signature databases**, refreshed with `freshclam` when ClamAV is installed
 - ecosystem scanners such as `npm audit`, OSV-Scanner, Trivy, Semgrep, Gitleaks, `pip-audit`, and `cargo-audit` when available
 
+Official references:
+
+- GitHub global security advisory API: https://docs.github.com/en/rest/security-advisories/global-advisories
+- GitHub Advisory Database: https://docs.github.com/en/code-security/concepts/vulnerability-reporting-and-management/github-advisory-database
+- ClamAV signature management: https://docs.clamav.net/manual/Usage/SignatureManagement.html
+- ClamAV supported versions / EOL policy: https://docs.clamav.net/faq/faq-eol.html
+
 The GitHub malware feed and ClamAV solve different problems. Package advisories help identify known malicious package/version relationships. ClamAV provides file-signature detection. Neither is treated as proof that everything not flagged is safe.
 
 ## Freshness policy
@@ -34,6 +41,12 @@ Fresh data is stored under:
 The metadata file records when the refresh occurred and which sources succeeded or failed.
 
 If network access is unavailable or a provider fails, the audit should continue with local/cached evidence but clearly state that current intelligence could not be verified.
+
+### Signatures and scanner engines are different
+
+Keeping the ClamAV database current is not enough if the installed ClamAV engine itself is obsolete. A newer database can use functionality that an old engine cannot fully consume.
+
+AgentSec should therefore surface outdated-engine warnings from ClamAV rather than claiming the malware scan is fully current just because `freshclam` downloaded a database. Keep the host's ClamAV package on a currently supported release through the normal operating-system/package-management process.
 
 ## Token efficiency
 

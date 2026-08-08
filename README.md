@@ -1,32 +1,33 @@
 # Install AgentSec
 
-Open your coding agent and paste this command:
+Open your coding agent and paste:
 
 ```bash
 npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -g -y
 ```
 
-That's it. Then ask your agent:
+Then say:
 
 ```text
-Use AgentSec to audit this project, explain the biggest security risks, and propose the simplest safe fixes.
+Use AgentSec to audit this project and propose the simplest safe fixes.
 ```
 
 <p align="center">
   <img src="assets/agentsec-hero.png" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
 </p>
 
-<h1 align="center">AgentSec</h1>
-<p align="center"><strong>A senior security engineer for AI-built software.</strong></p>
+# AgentSec
 
-AgentSec is an Agent Skill for vibe-coded and AI-assisted projects. It helps your coding agent understand the repo, find meaningful security problems, check current threat intelligence, explain what matters, and propose or implement safer code and configuration.
+**A senior security engineer for AI-built software.**
+
+AgentSec is an Agent Skill for vibe-coded and AI-assisted projects. It helps your coding agent understand the repo, find meaningful security problems, check current threat intelligence, explain what matters, rewrite insecure code or configuration, and verify the fix.
 
 ## What it does
 
-- Reads the repo progressively instead of wasting context on every file.
-- Reviews application code, authentication, authorization, dependencies, servers, CI/CD, cloud and edge configuration.
+- Reads repositories progressively instead of wasting context on every file.
+- Reviews code, authentication, authorization, dependencies, servers, CI/CD, cloud and edge configuration.
 - Checks current package advisories and malware intelligence when network access is available.
-- Looks for vulnerable or malicious dependencies, secrets, exposed files, weak permissions, injection flaws and risky architecture.
+- Finds vulnerable or malicious dependencies, secrets, exposed files, weak permissions, injection flaws and risky architecture.
 - Tells the coding agent how the code or configuration should change.
 - Verifies fixes with focused security checks and normal project tests when possible.
 
@@ -34,42 +35,92 @@ AgentSec is an Agent Skill for vibe-coded and AI-assisted projects. It helps you
 
 **Keep It Simple, Stupid.**
 
-AgentSec prefers simple security that people can actually understand and maintain. Secure defaults, least privilege, server-side authorization, standard cryptography, parameterized queries and small reviewable fixes beat unnecessary complexity.
+AgentSec prefers security that people can understand, operate and maintain.
+
+Secure defaults, least privilege, server-side authorization, standard cryptography, parameterized queries and small reviewable fixes beat unnecessary complexity.
 
 Complexity is only worth adding when the reduction in risk justifies it.
+
+## Standards
+
+AgentSec is **standards-led and tool-assisted**.
+
+Primary references:
+
+- **OWASP ASVS 5.0.0** for application security requirements
+- **OWASP Top 10:2025** for high-level application risk categories
+- **OWASP WSTG** for web testing methodology
+- **CWE** for weakness classification
+- **CIS Benchmarks** for infrastructure and server hardening
+- **NIST SSDF** for secure software-development practices
+
+AgentSec can correlate evidence from tools such as **Burp Suite**, **SonarQube**, **Snyk**, Semgrep, Trivy, OSV-Scanner, Gitleaks, npm audit, ZAP, Nmap and others.
+
+The standard defines what good looks like. The scanner provides evidence. AgentSec reasons about the actual architecture and root cause.
+
+See [`references/standards-and-tools.md`](references/standards-and-tools.md).
 
 ## Try it
 
 ```text
-Use AgentSec to audit this repo and find the highest-priority security issues.
+Use AgentSec to audit this repo. Understand the architecture first, then find the highest-priority security issues and propose KISS fixes.
 ```
 
 ```text
-Use AgentSec to review authentication and authorization and show me where least privilege or MFA would materially improve security.
+Use AgentSec to review authentication and authorization. Check least privilege, MFA, sessions, admin access and tenant boundaries.
 ```
 
 ```text
-Use AgentSec to check our dependencies for vulnerable or compromised packages and safely fix the high-confidence issues.
+Use AgentSec to check our dependencies for vulnerable or compromised packages and safely fix high-confidence issues.
 ```
 
 ```text
-Use AgentSec to review this project, implement the safe high-priority fixes, and retest them.
+Use AgentSec to implement the safe high-priority fixes and retest them.
 ```
+
+## Direct CLI
+
+```bash
+./agentsec repo .
+./agentsec server --local
+./agentsec web https://staging.example.com --authorized
+```
+
+Active remote testing is explicit:
+
+```bash
+./agentsec web https://staging.example.com --authorized --active
+```
+
+Only test systems you own or have permission to assess.
 
 ## Advanced
 
-AgentSec can also perform deeper architecture, application, supply-chain, server and authorized web security review.
+AgentSec can reason about:
 
-- [Getting Started](docs/GETTING_STARTED.md)
-- [Usage](docs/USAGE.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Security Concepts](docs/SECURITY_CONCEPTS.md)
-- [Fresh Security Intelligence](docs/FRESH_INTELLIGENCE.md)
-- [Remediation Guide](docs/REMEDIATION_GUIDE.md)
-- [Installation](docs/INSTALLATION.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security Policy](SECURITY.md)
+- SQL injection, XSS, SSRF, command injection, path traversal, CSRF and IDOR
+- authentication, sessions, MFA, passkeys and step-up authentication
+- database roles, service identities, cloud IAM and CI/CD least privilege
+- vulnerable and malicious packages, install scripts and supply-chain incidents
+- Linux servers, SSH, firewalls, Docker, web servers and exposed services
+- Cloudflare WAF, rate limiting, Turnstile, origin protection and caching boundaries
+- exposed directories, backups, dotfiles, logs, source maps and public assets
+- architecture, trust boundaries, sensitive data and blast radius
 
-> AgentSec is for defensive development and authorized security assessment. Only scan remote systems you own or have permission to test.
+AgentSec separates **confirmed vulnerabilities**, **security design gaps**, **security opportunities**, and items that **need review** so every observation does not become a red siren.
+
+## Docs
+
+- [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+- [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
+- [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
+- [`docs/USAGE.md`](docs/USAGE.md)
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/SECURITY_CONCEPTS.md`](docs/SECURITY_CONCEPTS.md)
+- [`docs/FRESH_INTELLIGENCE.md`](docs/FRESH_INTELLIGENCE.md)
+- [`docs/REMEDIATION_GUIDE.md`](docs/REMEDIATION_GUIDE.md)
+- [`references/standards-and-tools.md`](references/standards-and-tools.md)
+- [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [`SECURITY.md`](SECURITY.md)
 
 <p align="center"><strong>Audit. Reason. Remediate. Verify.</strong></p>

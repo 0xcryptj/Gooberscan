@@ -59,6 +59,18 @@ For IDOR/tenant isolation issues, scope every object lookup to the authenticated
 
 For session/auth changes, verify login, logout, password reset, MFA/recovery, privilege changes and session invalidation behavior.
 
+For BaaS or database authorization, remediate the effective boundary: enable
+RLS/security rules for sensitive objects, revoke broad anon/public grants,
+restrict function `EXECUTE`, make ownership/tenant/admin checks explicit and
+fail closed, and keep service-role credentials on trusted server paths. Do not
+remove a publishable/anon client credential solely because it appears in
+frontend code.
+
+For SSO-, invitation-, MFA-, or private-application policies, apply the policy
+to every route that can create, verify, recover, activate, invite, or elevate
+an identity. A secure primary UI is not sufficient if a direct backend route
+issues a session or changes account state without the same gate.
+
 ## Secrets
 
 When a real credential/key has been exposed:
@@ -106,6 +118,10 @@ After each change verify:
 - [ ] Intended functionality still works.
 - [ ] Unit/integration/build checks pass.
 - [ ] Authorization is tested with at least the relevant unauthenticated/lower-privilege case.
+- [ ] BaaS/database checks cover anon, authenticated User A, User B, admin and service identities where applicable.
+- [ ] User A cannot read or mutate User B/another tenant, and direct RPC/storage calls enforce the same boundary as the UI.
+- [ ] Every alternate signup, invitation, OTP, recovery, activation, OAuth/SSO and MFA path satisfies the intended authentication policy.
+- [ ] The negative security test fails before remediation and is denied after remediation.
 - [ ] Dependency lockfiles are internally consistent after package changes.
 - [ ] No new sensitive data was added to logs or reports.
 - [ ] Server/reverse-proxy configuration validates successfully.

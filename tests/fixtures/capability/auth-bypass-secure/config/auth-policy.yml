@@ -1,0 +1,4 @@
+sso_required: true
+invitation_only: true
+allow_password_signup: false
+admin_approval_required: true

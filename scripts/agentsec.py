@@ -172,14 +172,29 @@ def audit_repo(args: argparse.Namespace) -> int:
     checks: list[dict] = []
     notes: list[str] = []
 
+    # Keep direct Python invocations equivalent to the wrapper: architecture
+    # evidence must describe the target repository, not AgentSec itself.
+    architecture_output = outdir / "architecture.json"
+    checks.append(run_cmd(
+        "architecture inventory",
+        [sys.executable, str(ROOT / "scripts" / "architecture_inventory.py"), str(path), "--output", str(architecture_output)],
+        outdir,
+        cwd=path,
+    ))
+
     checks.append(find_sensitive_artifacts(path, outdir))
 
     package_json = path / "package.json"
     if package_json.exists() and command_exists("npm"):
         checks.append(run_cmd("npm-audit", ["npm", "audit", "--json"], outdir, cwd=path))
         checks.append(run_cmd("npm-package-tree", ["npm", "ls", "--all", "--json"], outdir, cwd=path))
-        # npm audit signatures is not supported by every npm release/registry; preserve output either way.
-        checks.append(run_cmd("npm-signatures", ["npm", "audit", "signatures"], outdir, cwd=path, timeout=300))
+        # Signature auditing is not supported by every npm release/registry and
+        # requires lockfile/package metadata in practice. Do not make a normal
+        # source-only audit wait on a registry operation that cannot add evidence.
+        if (path / "package-lock.json").exists() or (path / "npm-shrinkwrap.json").exists():
+            checks.append(run_cmd("npm-signatures", ["npm", "audit", "signatures"], outdir, cwd=path, timeout=300))
+        else:
+            checks.append(skipped("npm signatures", "no npm lockfile found"))
         if args.fix:
             checks.append(run_cmd("npm-audit-fix", ["npm", "audit", "fix"], outdir, cwd=path))
             try:

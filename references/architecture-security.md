@@ -102,6 +102,46 @@ Build an authorization matrix:
 
 Then verify the server enforces it.
 
+### BaaS and data-layer authorization
+
+For Supabase, Firebase, Appwrite, PocketBase and similar platforms, inspect the
+provider policy surface as part of the application architecture:
+
+- migrations/schema, sensitive columns, owner/tenant relationships and defaults
+- RLS/security rules, policy expressions, grants/revokes and storage policies
+- RPC/database functions, `SECURITY DEFINER`, invoker behavior and `EXECUTE`
+- client SDK queries and server routes that reveal reachable objects/actions
+- separate anon, authenticated, admin and service-role effective permissions
+
+A browser-visible URL, publishable key, anon key or app identifier is not itself
+a secret. Determine whether its effective permissions are intentionally narrow.
+The high-risk condition is a policy that lets that identity read or mutate data,
+invoke privileged functions, or access storage outside its owner/tenant boundary.
+Use deterministic findings as navigation evidence and confirm semantics in SQL
+and application code.
+
+For each sensitive operation, write a matrix such as:
+
+| Identity | Allowed scope | Must be denied |
+| --- | --- | --- |
+| Anonymous | Explicitly public records/actions only | Private data and mutations |
+| User A | A's records and permitted tenant actions | User B or another tenant |
+| User B | B's records and permitted tenant actions | User A or another tenant |
+| Admin | Documented administrative scope | Unrelated service/secrets unless required |
+| Service role | Narrow trusted backend purpose | Browser/client use |
+
+Verify the matrix through the data layer and direct RPC/storage calls, not only
+through frontend visibility.
+
+### Authentication alternate paths
+
+Treat authentication as a state machine. Enumerate every route or function that
+can register, verify OTP, accept an invitation, activate, recover, link, log in,
+enroll/recover MFA, or issue/elevate a session. Compare each route with the
+intended SSO, invitation-only, MFA, tenant-membership, admin-approval, or
+private-application policy. A secure primary UI does not make a secondary
+backend route secure; direct unauthenticated requests must be tested.
+
 Pay special attention to:
 
 - multi-tenant object queries

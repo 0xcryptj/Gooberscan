@@ -74,6 +74,25 @@ def any_dep(deps: set[str], names: set[str]) -> bool:
     return any(d in deps for d in names)
 
 
+def line_hits(files: list[Path], root: Path, pattern: re.Pattern[str], limit: int = 40) -> list[dict[str, object]]:
+    """Return compact, line-numbered evidence for agent follow-up.
+
+    These are navigation hints, not semantic vulnerability findings. The coding
+    agent must inspect the surrounding code and effective runtime permissions.
+    """
+    hits: list[dict[str, object]] = []
+    for path in files:
+        text = read_text(path)
+        if not text:
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if pattern.search(line):
+                hits.append({"file": rel(path, root), "line": number, "text": line.strip()[:240]})
+                if len(hits) >= limit:
+                    return hits
+    return hits
+
+
 def scan_patterns(files: list[Path], root: Path) -> dict[str, list[str]]:
     patterns = {
         "auth_markers": re.compile(r"\b(next-auth|authjs|passport|clerk|auth0|firebase.?auth|supabase.?auth|lucia|better-auth|oauth|openid|oidc|session|jwt)\b", re.I),
@@ -142,6 +161,47 @@ def analyze(root: Path) -> dict:
     hits = scan_patterns(files, root)
     public_dirs = detect_public_dirs(root)
 
+    # BaaS and identity evidence is deliberately split into small, inspectable
+    # signals. A match points the agent to high-risk code/configuration; it does
+    # not prove that the deployed policy is vulnerable.
+    supabase_pattern = re.compile(r"\b(supabase|@supabase/supabase-js|createClient)\b", re.I)
+    baas_pattern = re.compile(r"\b(supabase|firebase|appwrite|pocketbase)\b|@supabase/supabase-js", re.I)
+    rls_enable_pattern = re.compile(r"\b(enable|force)\s+row\s+level\s+security\b", re.I)
+    policy_pattern = re.compile(r"\bcreate\s+policy\b", re.I)
+    auth_identity_pattern = re.compile(r"\bauth\.(uid|role)\s*\(\s*\)", re.I)
+    function_pattern = re.compile(r"\bcreate\s+(or\s+replace\s+)?function\b|\brpc\s*\(", re.I)
+    definer_pattern = re.compile(r"\bsecurity\s+definer\b", re.I)
+    grant_pattern = re.compile(r"\b(grant|revoke)\b.*\b(anon|authenticated|public|execute)\b", re.I)
+    public_grant_pattern = re.compile(r"\bgrant\b.*\bto\s+(anon|public)\b", re.I)
+    storage_policy_pattern = re.compile(r"\b(storage\.objects|storage\.buckets|bucket_id|storage policy)\b", re.I)
+    public_credential_pattern = re.compile(
+        r"\b(vite_.*supabase.*(anon|publishable|key)|next_public_.*supabase|supabase_(anon|publishable)_key|anon_key|publishable[_ -]?key)\b",
+        re.I,
+    )
+    auth_route_pattern = re.compile(
+        r"\b(register|registration|signup|sign[-_ ]?up|invite|invitation|otp|verify|verification|activate|password|reset|login|oauth|sso|oidc|mfa|recovery)\b",
+        re.I,
+    )
+    sso_policy_pattern = re.compile(
+        r"\b(sso|oidc|openid|invitation[-_ ]?only|invite[-_ ]?only|private[_ -]?app|disable[d_ -]?signup|allow[_ -]?password)\b",
+        re.I,
+    )
+    db_files = [p for p in files if p.suffix.lower() == ".sql" or "/migrations/" in rel(p, root).replace("\\", "/")]
+    baas_hits = line_hits(files, root, baas_pattern)
+    supabase_hits = line_hits(files, root, supabase_pattern)
+    rls_enable_hits = line_hits(db_files or files, root, rls_enable_pattern)
+    policy_hits = line_hits(db_files or files, root, policy_pattern)
+    auth_identity_hits = line_hits(db_files or files, root, auth_identity_pattern)
+    function_hits = line_hits(db_files or files, root, function_pattern)
+    definer_hits = line_hits(db_files or files, root, definer_pattern)
+    grant_hits = line_hits(db_files or files, root, grant_pattern)
+    public_grant_hits = line_hits(db_files or files, root, public_grant_pattern)
+    storage_policy_hits = line_hits(db_files or files, root, storage_policy_pattern)
+    public_credential_hits = line_hits(files, root, public_credential_pattern)
+    auth_route_hits = line_hits(files, root, auth_route_pattern)
+    sso_policy_hits = line_hits(files, root, sso_policy_pattern)
+    migration_files = [rel(p, root) for p in db_files if "/migrations/" in rel(p, root).replace("\\", "/")]
+
     frameworks = []
     framework_map = {
         "next": {"next"},
@@ -198,6 +258,23 @@ def analyze(root: Path) -> dict:
                         + ([rel(root / ".well-known" / "security.txt", root)] if (root / ".well-known" / "security.txt").exists() else []),
         "config_files": config_files,
         "package_manager": "npm" if (root / "package-lock.json").exists() else ("pnpm" if (root / "pnpm-lock.yaml").exists() else ("yarn" if (root / "yarn.lock").exists() else None)),
+        "baas_platforms": sorted({
+            platform for platform in ("supabase", "firebase", "appwrite", "pocketbase")
+            if any(platform in (path.get("text", "").lower() + path.get("file", "").lower()) for path in baas_hits)
+        }),
+        "baas_evidence": baas_hits[:20],
+        "supabase_migrations": migration_files[:50],
+        "supabase_rls_enablement": rls_enable_hits,
+        "database_policies": policy_hits,
+        "database_identity_checks": auth_identity_hits,
+        "database_functions_or_rpc": function_hits,
+        "security_definer_functions": definer_hits,
+        "database_grants": grant_hits,
+        "public_database_grants": public_grant_hits,
+        "storage_policy_evidence": storage_policy_hits,
+        "public_client_credential_evidence": public_credential_hits,
+        "authentication_route_evidence": auth_route_hits,
+        "authentication_policy_evidence": sso_policy_hits,
     }
 
     opportunities = []
@@ -233,6 +310,70 @@ def analyze(root: Path) -> dict:
             evidence=hits["db_markers"][:8] or ["Database dependency detected."],
             why="Applications usually do not need schema-owner or superuser privileges at runtime.",
             action="Separate migration/admin credentials from runtime credentials. Grant the runtime identity only required schemas/tables/actions and restrict database network exposure."
+        )
+
+    baas_platforms = signals["baas_platforms"]
+    if baas_platforms:
+        add_opportunity(
+            opportunities,
+            title="Review BaaS data-layer authorization and effective client permissions",
+            category="authorization",
+            confidence="high-value-review",
+            evidence=signals["baas_evidence"][:8],
+            why="BaaS client credentials are often intentionally public; the security boundary is the effective database, storage, function, and tenant policy behind them.",
+            action="Inspect migrations/schema, RLS or security rules, policies, grants, storage rules, RPC/server functions, and application queries. Build an identity matrix for anon, authenticated users, other users, admins, and service roles. Treat a public identifier or publishable/anon credential as context, not proof of secret exposure.",
+        )
+        if "supabase" in baas_platforms:
+            if not signals["supabase_rls_enablement"]:
+                add_opportunity(
+                    opportunities,
+                    title="Verify Supabase tables fail closed with Row Level Security",
+                    category="authorization",
+                    confidence="high-value-review",
+                    evidence=["No CREATE/ALTER statement enabling Row Level Security was found in inspected SQL evidence."],
+                    why="A browser-held anon/publishable credential can reach data that database policies allow. Missing RLS may expose or mutate records even when the frontend hides them.",
+                    action="For every sensitive table, enable and force RLS where appropriate, revoke broad table privileges, then add explicit owner/tenant/admin policies. Verify anon, User A, User B, admin, and service-role behavior with negative tests.",
+                )
+            if signals["public_database_grants"]:
+                add_opportunity(
+                    opportunities,
+                    title="Review anonymous grants and RPC EXECUTE permissions",
+                    category="authorization",
+                    confidence="high-value-review",
+                    evidence=signals["public_database_grants"][:8],
+                    why="A grant to anon/public or EXECUTE on a function can bypass the intended UI boundary unless the function and data path enforce authorization independently.",
+                    action="List effective privileges for anon/authenticated/service roles. Revoke unnecessary anon table/function access, use explicit positive checks with auth.uid()/auth.role(), and review SECURITY DEFINER search paths and ownership.",
+                )
+            if signals["security_definer_functions"] or signals["database_functions_or_rpc"]:
+                add_opportunity(
+                    opportunities,
+                    title="Trace RPC and database-function authorization to the data operation",
+                    category="authorization",
+                    confidence="high-value-review",
+                    evidence=(signals["security_definer_functions"] + signals["database_functions_or_rpc"])[:8],
+                    why="RPCs and SECURITY DEFINER functions can create a second authorization boundary that does not behave like the calling frontend or table RLS.",
+                    action="For each function, document caller grants, invoker/definer mode, auth.uid()/auth.role() checks, object/tenant scope, destructive effects, and RLS interaction. Test unauthorized identities explicitly rather than checking only that the function runs.",
+                )
+            if signals["storage_policy_evidence"]:
+                add_opportunity(
+                    opportunities,
+                    title="Review Supabase Storage policies separately from table policies",
+                    category="storage",
+                    confidence="review-needed",
+                    evidence=signals["storage_policy_evidence"][:8],
+                    why="Storage objects have their own policy surface and can leak sensitive files even when application tables are protected.",
+                    action="Default buckets private, scope object paths to authenticated user/tenant identity, constrain upload/update/delete, and test direct storage API access independently of UI visibility.",
+                )
+
+    if signals["authentication_route_evidence"]:
+        add_opportunity(
+            opportunities,
+            title="Enumerate every authentication and identity-changing path",
+            category="identity",
+            confidence="high-value-review",
+            evidence=signals["authentication_route_evidence"][:10],
+            why="The primary login UI does not define the complete authentication boundary. Registration, OTP, invitation, recovery, activation, OAuth, and admin paths can create or elevate identity independently.",
+            action="Model the intended authentication state machine and compare every backend route capable of creating, verifying, recovering, activating, or elevating an identity. Require SSO/invitation/MFA/tenant/admin gates on every applicable path and test direct API calls.",
         )
 
     if signals["queue_or_worker_markers"]:
@@ -358,6 +499,11 @@ def analyze(root: Path) -> dict:
             "Identify identities: anonymous users, normal users, privileged users, service accounts, workers, deployers, database roles, cloud identities.",
             "Classify sensitive assets and destructive/high-value actions.",
             "Trace authorization at every resource/action boundary, including tenant isolation.",
+            "For BaaS platforms, inspect migrations, RLS/security rules, policies, grants, storage rules, RPCs, SECURITY DEFINER functions, and effective permissions for anon/authenticated/admin/service identities.",
+            "A publishable/anon/client credential or application identifier may be intentionally public; assess the permissions it unlocks and whether sensitive data/actions are policy-protected.",
+            "Construct an authorization matrix for anonymous, User A, User B, admin, and service roles. Prefer explicit positive allow rules and fail closed when identity, ownership, tenant, or role checks are missing.",
+            "Enumerate alternate authentication paths (signup, invitation, OTP, password, recovery, activation, OAuth/SSO, MFA) and compare each with the intended access policy; do not trust frontend-only restrictions.",
+            "After remediation, verify negative cases: anon cannot read/mutate protected data, User A cannot affect User B or another tenant, non-admins cannot invoke admin/destructive functions, and alternate auth routes cannot bypass required identity gates.",
             "Compare each identity's permissions with the minimum required for its function.",
             "Assess MFA/step-up authentication based on account privilege and action impact.",
             "Review recovery flows, sessions, rate limits, abuse controls, audit logs, secrets, backups, and incident-response hooks.",

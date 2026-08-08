@@ -49,8 +49,13 @@ if [ "${1:-}" = "repo" ]; then
     fi
   done
 
-  mkdir -p "$ROOT/.agentsec"
-  ARCH_OUT="$ROOT/.agentsec/architecture-latest.json"
+  TARGET_ABS="$(cd "$TARGET" 2>/dev/null && pwd)"
+  if [[ -z "$TARGET_ABS" || ! -d "$TARGET_ABS" ]]; then
+    echo "AgentSec: repository path does not exist: $TARGET" >&2
+    exit 2
+  fi
+  mkdir -p "$TARGET_ABS/.agentsec"
+  ARCH_OUT="$TARGET_ABS/.agentsec/architecture-latest.json"
 
   echo "[AgentSec] Mapping the repository before deep review..."
   python3 "$ROOT/scripts/architecture_inventory.py" "$TARGET" --output "$ARCH_OUT" || \
@@ -66,7 +71,7 @@ if [ "${1:-}" = "repo" ]; then
   # If ClamAV is available, use its refreshed signatures against the working tree.
   # The scan is bounded so a very large repository cannot block the full audit forever.
   if command -v clamscan >/dev/null 2>&1; then
-    INTEL_DIR="$ROOT/.agentsec/intel"
+    INTEL_DIR="$TARGET_ABS/.agentsec/intel"
     mkdir -p "$INTEL_DIR"
     echo "[AgentSec] Scanning repository files with current ClamAV signatures..."
     set +e

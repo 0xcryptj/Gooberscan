@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/agentsec-hero.png" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
-</p>
-
 # Install AgentSec
 
 Open your coding agent and paste:
@@ -15,6 +11,10 @@ Then say:
 ```text
 Use AgentSec to audit this project and propose the simplest safe fixes.
 ```
+
+<p align="center">
+  <img src="assets/agentsec-hero.webp" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
+</p>
 
 # AgentSec
 

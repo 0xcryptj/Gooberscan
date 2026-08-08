@@ -2,7 +2,7 @@ name: Import AgentSec hero
 
 on:
   push:
-    branches: [hero-exact-upload]
+    branches: [fix-readme-hero]
     paths:
       - .github/workflows/import-agentsec-hero.yml
 

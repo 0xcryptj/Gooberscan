@@ -55,7 +55,7 @@ Update later with:
 npx skills update agentsec -y
 ```
 
-See [`docs/INSTALLATION.md`](docs/INSTALLATION.md) for agent paths, local installation, troubleshooting, and scanner dependencies.
+See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for the shortest path or [`docs/INSTALLATION.md`](docs/INSTALLATION.md) for agent paths, local installation, troubleshooting, and scanner dependencies.
 
 ## What AgentSec Does
 
@@ -344,12 +344,14 @@ AgentSec/
 ├── assets/
 │   └── agentsec-banner.jpg
 ├── docs/
+│   ├── QUICKSTART.md
 │   ├── GETTING_STARTED.md
 │   ├── INSTALLATION.md
 │   ├── USAGE.md
 │   ├── ARCHITECTURE.md
 │   ├── SECURITY_CONCEPTS.md
-│   └── REMEDIATION_GUIDE.md
+│   ├── REMEDIATION_GUIDE.md
+│   └── DEVELOPMENT.md
 ├── scripts/
 │   ├── agentsec.py
 │   ├── architecture_inventory.py
@@ -367,12 +369,14 @@ AgentSec/
 
 | Document | Purpose |
 | --- | --- |
-| [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) | Five-minute introduction and first audit |
+| [`docs/QUICKSTART.md`](docs/QUICKSTART.md) | One-line install and immediate commands/prompts |
+| [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) | Five-minute introduction and first full audit |
 | [`docs/INSTALLATION.md`](docs/INSTALLATION.md) | Agent installation, scanner dependencies and troubleshooting |
 | [`docs/USAGE.md`](docs/USAGE.md) | Commands, modes, authorization flags and examples |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How AgentSec is structured and how agents consume it |
 | [`docs/SECURITY_CONCEPTS.md`](docs/SECURITY_CONCEPTS.md) | Threat modeling, least privilege, identity, supply chain, edge and server concepts |
 | [`docs/REMEDIATION_GUIDE.md`](docs/REMEDIATION_GUIDE.md) | How findings should be fixed and verified |
+| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | Extending AgentSec, tests, integrations and design rules |
 | [`SECURITY.md`](SECURITY.md) | Responsible disclosure and project security policy |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development and contribution workflow |
 

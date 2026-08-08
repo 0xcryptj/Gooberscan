@@ -6,7 +6,7 @@ license: MIT
 compatibility: Linux/macOS/WSL. Python 3.10+ recommended. Network access improves advisory freshness. Optional tools include nmap, gobuster, ffuf, nikto, sqlmap, Docker/ZAP, lynis, ClamAV, npm, Semgrep, Trivy, OSV-Scanner, Gitleaks, Snyk CLI, SonarScanner/SonarQube evidence, Burp Suite findings and ecosystem package auditors.
 metadata:
   author: 0xcryptj
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # AgentSec

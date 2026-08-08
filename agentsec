@@ -2,6 +2,43 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERSION_FILE="$ROOT/VERSION"
+VERSION="$(cat "$VERSION_FILE" 2>/dev/null || printf 'development')"
+
+if [[ "${1:-}" == "--version" || "${1:-}" == "version" ]]; then
+  printf 'AgentSec %s\n' "$VERSION"
+  exit 0
+fi
+
+if [[ "${1:-}" == "update" ]]; then
+  SCOPE="global"
+  for arg in "${@:2}"; do
+    case "$arg" in
+      --local) SCOPE="project" ;;
+      --global) SCOPE="global" ;;
+      --help|-h)
+        printf 'Usage: agentsec update [--global|--local]\n'
+        printf 'Updates the installed AgentSec skill through the skills CLI.\n'
+        exit 0
+        ;;
+      *)
+        printf 'AgentSec: unknown update option: %s\n' "$arg" >&2
+        exit 2
+        ;;
+    esac
+  done
+
+  if ! command -v npx >/dev/null 2>&1; then
+    echo "AgentSec: update requires npx (Node.js/npm)." >&2
+    exit 1
+  fi
+
+  echo "[AgentSec] Updating the $SCOPE AgentSec skill..."
+  if [[ "$SCOPE" == "global" ]]; then
+    exec npx --yes skills update agentsec -g -y
+  fi
+  exec npx --yes skills update agentsec -p -y
+fi
 
 if [ "${1:-}" = "repo" ]; then
   TARGET="."

@@ -5,7 +5,7 @@
 The polished one-line installer installs AgentSec as a global skill for supported coding agents:
 
 ```bash
-curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/0xcryptj/AgentSec/v1.2.0/install.sh | bash
+curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/0xcryptj/AgentSec/v1.2.1/install.sh | bash
 ```
 
 Prefer to inspect the script first? Run it locally after cloning:
@@ -106,6 +106,8 @@ Use AgentSec to implement the safe high-priority fixes and retest them.
 ./agentsec repo .
 ./agentsec server --local
 ./agentsec web https://staging.example.com --authorized
+./agentsec --version
+./agentsec update
 ```
 
 Active remote testing is explicit:

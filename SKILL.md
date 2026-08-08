@@ -206,6 +206,57 @@ Do not claim MFA, WAF, rate limiting, or another externally managed control is a
 
 See [references/architecture-security.md](references/architecture-security.md).
 
+## BaaS authorization and public client credentials
+
+When the repository uses Supabase, Firebase, Appwrite, PocketBase, or a similar
+backend-as-a-service platform, treat the client SDK and its browser-visible
+URL/key as an architectural signal, not an automatic secret finding. A
+publishable, anon, or application identifier may be designed for client use.
+The question is what that identity can effectively read, write, execute, or
+upload.
+
+Inspect the data layer before judging the credential:
+
+- migrations/schema for sensitive tables, ownership fields, tenant fields, and privileged data
+- RLS/security rules, policy expressions, default privileges, grants, and revokes
+- database functions/RPCs, `SECURITY DEFINER`, `auth.uid()`, `auth.role()`, and function `EXECUTE` grants
+- storage buckets and object policies separately from table policies
+- server routes and client queries that reveal which records/actions are reachable
+- service-role/admin credentials and whether they are confined to trusted server code
+
+Construct an effective authorization matrix for anonymous callers, authenticated
+User A, authenticated User B, admins, workers, and service roles. Check both
+object-level ownership and tenant boundaries. Prefer explicit positive allow
+rules and fail closed when identity, ownership, tenant, or role context is
+missing. Do not call a public client credential exposed merely because it is in
+frontend code; call out the real issue when its effective policy exposes
+sensitive data or privileged operations. Deterministic inventory matches are
+evidence for this review, not proof of a semantic vulnerability.
+
+## Authorization correctness, not authorization syntax
+
+Do not stop after finding an `if` statement, middleware call, or policy. Write
+the intended matrix for each sensitive read, mutation, RPC, and destructive
+operation, then evaluate the actual condition for each identity. Look for
+negative-deny logic that accidentally permits the caller after a failed check,
+inverted role comparisons, missing `auth.uid()`/tenant ownership checks, broad
+function grants, and differences between invoker RLS and `SECURITY DEFINER`
+execution. Test anonymous, two distinct ordinary users, an admin, and a service
+identity where those roles exist. The secure result is an explicit allow for
+the intended identity and a denied result for every other relevant identity.
+
+## Authentication path completeness
+
+Model authentication as a state machine, not a single login screen. Enumerate
+every backend route or function that can create, verify, recover, activate,
+invite, link, or elevate an identity: password registration, OTP verification,
+invitation acceptance, account activation, password recovery, OAuth/OIDC/SSO,
+MFA enrollment/recovery, and admin approval. Compare each path with the stated
+policy (for example SSO-only, invitation-only, MFA-required, private app, or
+tenant-approved). A frontend redirect or hidden control is not a server-side
+boundary. Direct calls to alternate routes must enforce the same policy before
+issuing a session or changing identity state.
+
 ## Secure rewrite guidance
 
 When the coding agent asks how to rewrite code securely, do not respond with vague advice such as "sanitize input" or "use best practices."

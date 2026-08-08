@@ -158,3 +158,16 @@ AgentSec separates **confirmed vulnerabilities**, **security design gaps**, **se
 - [`CHANGELOG.md`](CHANGELOG.md)
 
 <p align="center"><strong>Audit. Reason. Remediate. Verify.</strong></p>
+
+## Support development
+
+If AgentSec is useful to you, you can support its development and security research with crypto:
+
+| Network | Address |
+| --- | --- |
+| Solana | `8iWkKbf3fzRJTDeN8Z2xCTAxNRW7P4by6esNL4MvLDNb` |
+| Ethereum / EVM | `0xEcCD423fb879eBcDe42D50cB9B99AcF72cF8506a` |
+| Bitcoin | `bc1qq8q6s485m73vzq62ucl6v48t36fuf0t5q2ly2r` |
+| Monero | `868iJ8XTJpaYcyGTAs5hqPWvKBszDF11ERoYZg2NRU8PBogEjMecU6Q5USCgrJbDXHUNfxFrq3m5PAUaFwnKXU5WJxM8krP` |
+
+Always verify the network and address before sending funds.

@@ -89,6 +89,8 @@ High-priority categories:
 - Unsafe deserialization and dynamic code execution.
 - Authentication bypass, account recovery weaknesses, MFA mistakes, and session fixation.
 - Broken object-level/function-level authorization, IDOR, tenant-boundary mistakes, and admin-route exposure.
+- BaaS policy gaps: missing/weak RLS or security rules, broad anon/authenticated grants, unsafe RPCs, `SECURITY DEFINER`, storage policies, and service-role use in client code.
+- Alternate identity paths: signup, invitations, OTP, verification, activation, password recovery, OAuth/OIDC/SSO and MFA routes that may not enforce the primary login policy.
 - CSRF on state-changing cookie-authenticated requests.
 - Open redirect and unsafe callback/return URLs.
 - Insecure file uploads, content-type confusion, executable uploads, and public bucket/object ACLs.
@@ -99,6 +101,13 @@ High-priority categories:
 - WebSocket authorization and origin validation.
 
 Treat Semgrep/static-analysis hits as starting points. Trace the actual sanitization, parameterization, encoding, and authorization logic before confirmation.
+
+For authorization, distinguish evidence from proof. A public client key or
+application identifier may be intentionally public; determine the data and
+operations it unlocks. Build an identity/action matrix and inspect both the
+frontend caller and the server/data-layer enforcement. A route name or matching
+authorization token is not enough to establish that the condition has the
+intended truth table.
 
 ## Secrets and sensitive artifacts
 

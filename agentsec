@@ -14,10 +14,17 @@ if [ "${1:-}" = "repo" ]; then
 
   mkdir -p "$ROOT/.agentsec"
   ARCH_OUT="$ROOT/.agentsec/architecture-latest.json"
-  echo "[AgentSec] Mapping repository architecture and security design signals..."
+
+  echo "[AgentSec] Mapping the repository before deep review..."
   python3 "$ROOT/scripts/architecture_inventory.py" "$TARGET" --output "$ARCH_OUT" || \
     echo "[AgentSec] Architecture inventory could not complete; continuing with deterministic checks."
   echo "[AgentSec] Architecture inventory: $ARCH_OUT"
+
+  if [ -f "$ROOT/scripts/security_intel.py" ]; then
+    echo "[AgentSec] Refreshing repository-specific security intelligence..."
+    python3 "$ROOT/scripts/security_intel.py" "$TARGET" || \
+      echo "[AgentSec] Fresh intelligence could not be verified; continuing with local/cached scanners."
+  fi
 fi
 
 exec python3 "$ROOT/scripts/agentsec.py" "$@"

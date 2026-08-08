@@ -13,7 +13,7 @@ Use AgentSec to audit this project and propose the simplest safe fixes.
 ```
 
 <p align="center">
-  <img src="assets/agentsec-hero.webp" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
+  <img src="assets/agentsec-hero.jpg" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
 </p>
 
 # AgentSec

@@ -2,7 +2,7 @@ name: AgentSec CI
 
 on:
   push:
-    branches: [main, agent-skill-v1]
+    branches: [main]
   pull_request:
 
 permissions:

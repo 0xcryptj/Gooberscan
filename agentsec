@@ -25,6 +25,29 @@ if [ "${1:-}" = "repo" ]; then
     python3 "$ROOT/scripts/security_intel.py" "$TARGET" || \
       echo "[AgentSec] Fresh intelligence could not be verified; continuing with local/cached scanners."
   fi
+
+  # If ClamAV is available, use its refreshed signatures against the working tree.
+  # The scan is bounded so a very large repository cannot block the full audit forever.
+  if command -v clamscan >/dev/null 2>&1; then
+    INTEL_DIR="$ROOT/.agentsec/intel"
+    mkdir -p "$INTEL_DIR"
+    echo "[AgentSec] Scanning repository files with current ClamAV signatures..."
+    set +e
+    timeout 600 clamscan \
+      --recursive \
+      --infected \
+      --no-summary \
+      --exclude-dir='(^|/)(\.git|\.venv|venv|dist|build|\.next|\.agentsec)(/|$)' \
+      "$TARGET" >"$INTEL_DIR/clamav-repo-scan.txt" 2>&1
+    CLAM_RC=$?
+    set -e
+    case "$CLAM_RC" in
+      0) echo "[AgentSec] ClamAV: no signature matches found." ;;
+      1) echo "[AgentSec] ClamAV: signature match found. Review $INTEL_DIR/clamav-repo-scan.txt" ;;
+      124) echo "[AgentSec] ClamAV: scan reached the 10-minute limit; partial results were saved." ;;
+      *) echo "[AgentSec] ClamAV could not complete cleanly; review $INTEL_DIR/clamav-repo-scan.txt" ;;
+    esac
+  fi
 fi
 
 exec python3 "$ROOT/scripts/agentsec.py" "$@"

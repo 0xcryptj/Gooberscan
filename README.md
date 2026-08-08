@@ -106,9 +106,18 @@ Use AgentSec to implement the safe high-priority fixes and retest them.
 ./agentsec repo .
 ./agentsec server --local
 ./agentsec web https://staging.example.com --authorized
+./agentsec url https://staging.example.com --authorized
 ./agentsec --version
 ./agentsec update
 ```
+
+Website audit prompt:
+
+```text
+This is my website: https://example.com. Take a look at misconfigurations and perform an overall security audit. Look for vulnerabilities we can patch and hardening opportunities.
+```
+
+The agent should run a safe authorized baseline first, correlate results with the application source when available, separate patchable code issues from server/provider configuration, and ask before changing anything. Active validation remains opt-in with `--active`.
 
 Active remote testing is explicit:
 

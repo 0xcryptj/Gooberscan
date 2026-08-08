@@ -417,6 +417,7 @@ def build_parser() -> argparse.ArgumentParser:
               agentsec server --local
               agentsec server --target app.example.com --authorized
               agentsec web https://app.example.com --authorized
+              agentsec url https://app.example.com --authorized
               agentsec web https://staging.example.com --authorized --active
             """
         ),
@@ -429,7 +430,7 @@ def build_parser() -> argparse.ArgumentParser:
     repo.add_argument("--fix", action="store_true", help="apply conservative package-manager remediation where supported")
     repo.set_defaults(func=audit_repo)
 
-    web = sub.add_parser("web", help="audit a web application")
+    web = sub.add_parser("web", aliases=["url"], help="audit a web application or URL")
     web.add_argument("url")
     web.add_argument("--authorized", action="store_true", help="confirm you own or have permission to assess the target")
     web.add_argument("--active", action="store_true", help="run controlled active SQLi/XSS validation; requires --authorized")

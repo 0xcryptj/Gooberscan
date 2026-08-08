@@ -1,19 +1,20 @@
-name: Import AgentSec hero
+name: Build AgentSec README hero
 
 on:
-  push:
-    branches: [fix-readme-hero]
-    paths:
-      - .github/workflows/import-agentsec-hero.yml
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  import:
+  build-hero:
+    if: github.head_ref == 'fix-inline-hero'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
 
       - name: Reconstruct and verify hero
         shell: bash
@@ -28,8 +29,9 @@ jobs:
           sed -i 's#assets/agentsec-hero\.png#assets/agentsec-hero.webp#g' README.md
           rm -rf .hero-parts
           rm -f .github/workflows/import-agentsec-hero.yml
+
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
           git commit -m "Add AgentSec hero artwork"
-          git push
+          git push origin HEAD:${{ github.head_ref }}

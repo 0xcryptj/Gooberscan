@@ -7,6 +7,7 @@ agentsec repo <path> [--fix]
 agentsec server --local
 agentsec server --target <host> --authorized
 agentsec web <url> [--authorized] [--active]
+agentsec url <url> [--authorized] [--active]
 agentsec --version
 agentsec update [--global|--local]
 ```
@@ -100,6 +101,20 @@ Baseline:
 ```bash
 ./agentsec web https://staging.example.com --authorized
 ```
+
+`url` is an alias for `web`:
+
+```bash
+./agentsec url https://staging.example.com --authorized
+```
+
+Recommended coding-agent prompt:
+
+```text
+This is my website: https://example.com. Take a look at misconfigurations and perform an overall security audit. Look for vulnerabilities we can patch and hardening opportunities.
+```
+
+The baseline audit records HTTP/TLS headers, safe service evidence, public exposure checks and available defensive scanners. When a local application repository is available, correlate the URL findings with source/configuration before proposing a patch. Treat DNS, CDN, WAF, hosting and server-provider changes as deployment work rather than silently editing application code.
 
 The baseline can combine HTTP/TLS/header review, public metadata checks, safe service discovery, directory/path exposure checks, Nikto, ZAP baseline and related evidence.
 

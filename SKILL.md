@@ -224,10 +224,33 @@ Examples include parameterized queries, context-aware output encoding, central a
 
 ## Web application audit
 
+When a user provides a website they own or explicitly says they are authorized to assess it, support this natural-language workflow:
+
+```text
+This is my website: https://example.com. Take a look at misconfigurations and perform an overall security audit. Look for vulnerabilities we can patch and hardening opportunities.
+```
+
+Translate that request into a safe baseline first:
+
+1. validate the URL and confirm the stated ownership/authorization scope
+2. run `./agentsec web <url> --authorized` (or the equivalent `url` alias)
+3. review HTTP/TLS headers, public exposure, service evidence and available defensive scanners
+4. if the application repository is available, correlate runtime evidence with source and configuration
+5. classify each result as patchable code/configuration, provider/server hardening, security opportunity or review-needed
+6. explain the smallest safe remediation and verification plan before changing files or external infrastructure
+
+Do not silently convert a website audit into active exploitation. Ask for explicit active authorization before using `--active`, and keep active validation controlled and non-destructive.
+
 Baseline authorized assessment:
 
 ```bash
 ./agentsec web https://example.com --authorized
+```
+
+Equivalent URL alias:
+
+```bash
+./agentsec url https://example.com --authorized
 ```
 
 Explicit active validation:

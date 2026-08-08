@@ -1,0 +1,23 @@
+name: Cleanup README image branches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/cleanup-readme-image-branches.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete temporary branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for branch in fix-readme-hero readme-image-final; do
+            gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$branch" || true
+          done

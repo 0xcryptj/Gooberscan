@@ -22,7 +22,10 @@ jobs:
 
       - name: Python syntax
         run: |
-          python -m py_compile scripts/agentsec.py scripts/architecture_inventory.py
+          python -m py_compile \
+            scripts/agentsec.py \
+            scripts/architecture_inventory.py \
+            scripts/security_intel.py
 
       - name: Shell syntax
         run: |
@@ -33,10 +36,11 @@ jobs:
       - name: Unit tests
         run: python -m unittest discover -s tests -v
 
-      - name: CLI smoke test
+      - name: CLI smoke tests
         run: |
           python scripts/agentsec.py --help
           python scripts/architecture_inventory.py . --output /tmp/agentsec-architecture.json
+          python scripts/security_intel.py . --offline --skip-clamav --force
           python - <<'PY'
           import json
           with open('/tmp/agentsec-architecture.json', encoding='utf-8') as f:
@@ -44,7 +48,10 @@ jobs:
           assert data['tool'] == 'AgentSec architecture inventory'
           assert 'signals' in data
           assert 'opportunities' in data
-          print('Architecture inventory smoke test passed')
+          with open('.agentsec/intel/metadata.json', encoding='utf-8') as f:
+              intel = json.load(f)
+          assert intel['tool'] == 'AgentSec security intelligence'
+          print('Architecture and security-intel smoke tests passed')
           PY
 
       - name: Validate Agent Skills specification

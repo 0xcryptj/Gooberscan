@@ -6,6 +6,22 @@ AgentSec follows the shared `SKILL.md` Agent Skills format. The easiest installa
 
 ### Global install across supported agents
 
+Recommended one-line installer:
+
+```bash
+curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/0xcryptj/AgentSec/main/install.sh | bash
+```
+
+The installer checks for `npx`, shows each installation phase, and verifies the global skill path. To inspect it before running:
+
+```bash
+git clone https://github.com/0xcryptj/AgentSec.git
+cd AgentSec
+./install.sh
+```
+
+Direct CLI equivalent:
+
 ```bash
 npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -g -y
 ```

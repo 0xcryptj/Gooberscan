@@ -6,6 +6,11 @@ All notable AgentSec changes are documented here.
 
 Future changes will be documented here.
 
+## 1.2.1 — 2026-08-08
+
+- Added `agentsec --version` and `agentsec update` for CLI-driven skill maintenance.
+- Added global and project-local update scopes through the `skills` CLI.
+
 ## 1.2.0 — 2026-08-08
 
 - Added a branded one-line `install.sh` for global or project-local skill installation.

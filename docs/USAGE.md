@@ -7,6 +7,8 @@ agentsec repo <path> [--fix]
 agentsec server --local
 agentsec server --target <host> --authorized
 agentsec web <url> [--authorized] [--active]
+agentsec --version
+agentsec update [--global|--local]
 ```
 
 Use `./agentsec --help` for the current CLI help.

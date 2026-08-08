@@ -9,7 +9,7 @@ AgentSec follows the shared `SKILL.md` Agent Skills format. The easiest installa
 Recommended one-line installer:
 
 ```bash
-curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/0xcryptj/AgentSec/v1.2.0/install.sh | bash
+curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/0xcryptj/AgentSec/v1.2.1/install.sh | bash
 ```
 
 The installer checks for `npx`, shows each installation phase, and verifies the global skill path. To inspect it before running:
@@ -41,6 +41,20 @@ npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -y
 Project-local installation is useful when a team wants the security skill associated with one repository. Global installation makes AgentSec available across your projects.
 
 ### Update AgentSec
+
+Preferred CLI update:
+
+```bash
+agentsec update
+```
+
+For a project-local installation:
+
+```bash
+agentsec update --local
+```
+
+Direct skills CLI fallback:
 
 ```bash
 npx skills update agentsec -y

@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORT_ROOT = ROOT / ".agentsec" / "reports"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").exists() else "development"
 
 
 def now_stamp() -> str:
@@ -90,7 +91,7 @@ def skipped(name: str, reason: str) -> dict:
 def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str]) -> None:
     data = {
         "tool": "AgentSec",
-        "version": "1.0.0",
+        "version": VERSION,
         "scope": scope,
         "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "checks": checks,
@@ -420,6 +421,7 @@ def build_parser() -> argparse.ArgumentParser:
             """
         ),
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     repo = sub.add_parser("repo", help="audit source, dependencies, secrets, and deployment configuration")

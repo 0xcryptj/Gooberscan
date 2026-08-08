@@ -2,8 +2,7 @@
 set -euo pipefail
 
 # AgentSec dependency installer for Debian / Ubuntu / WSL.
-# Installs the baseline deterministic tools used by AgentSec.
-# Optional cross-ecosystem scanners are installed when a clean package path exists.
+# Installs baseline deterministic tools used by AgentSec.
 
 if [ "${EUID}" -ne 0 ]; then
   echo "Run with sudo: sudo ./install-deps.sh"
@@ -43,17 +42,16 @@ apt-get install -y \
   gobuster \
   sqlmap \
   lynis \
+  clamav \
+  clamav-freshclam \
   docker.io \
   ruby-full
 
-# ffuf is packaged by many current Debian/Ubuntu releases. Keep it optional so
-# one missing package does not break the entire AgentSec setup.
 if ! command -v ffuf >/dev/null 2>&1; then
   echo "[AgentSec] Attempting to install ffuf..."
   apt-get install -y ffuf 2>/dev/null || echo "[AgentSec] ffuf is unavailable from this apt repository; Gobuster will be used instead."
 fi
 
-# SecLists provides the conservative common web-content list used by AgentSec.
 if [ ! -f /usr/share/seclists/Discovery/Web-Content/common.txt ]; then
   echo "[AgentSec] Installing SecLists..."
   if apt-cache show seclists >/dev/null 2>&1; then
@@ -66,7 +64,6 @@ if [ ! -f /usr/share/seclists/Discovery/Web-Content/common.txt ]; then
   fi
 fi
 
-# Install Python CLI scanners in the actual user's isolated pipx environment.
 if [ "$REAL_USER" != "root" ]; then
   echo "[AgentSec] Installing isolated Python scanners for $REAL_USER..."
   sudo -H -u "$REAL_USER" pipx ensurepath >/dev/null 2>&1 || true
@@ -78,6 +75,12 @@ else
   pipx install pip-audit 2>/dev/null || pipx upgrade pip-audit 2>/dev/null || true
 fi
 
+# ClamAV's freshclam service normally maintains current signature databases.
+# If systemd is unavailable (common in some WSL/container setups), security_intel.py
+# will attempt a best-effort `freshclam` refresh before repository audits.
+echo "[AgentSec] Enabling ClamAV signature updates when systemd is available..."
+systemctl enable --now clamav-freshclam 2>/dev/null || true
+
 # Docker is used for OWASP ZAP. Group membership is a high-privilege capability,
 # so AgentSec does NOT automatically add users to the docker group.
 echo "[AgentSec] Enabling Docker service when systemd is available..."
@@ -88,11 +91,11 @@ if command -v docker >/dev/null 2>&1; then
   docker pull ghcr.io/zaproxy/zaproxy:stable 2>/dev/null || true
 fi
 
-# Make repository entry points executable when the installer is run from the repo.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 chmod +x "$SCRIPT_DIR/agentsec" 2>/dev/null || true
 chmod +x "$SCRIPT_DIR/scripts/agentsec.py" 2>/dev/null || true
 chmod +x "$SCRIPT_DIR/scripts/architecture_inventory.py" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/scripts/security_intel.py" 2>/dev/null || true
 chmod +x "$SCRIPT_DIR/scripts/local_server_audit.sh" 2>/dev/null || true
 
 cat <<EOF
@@ -107,6 +110,7 @@ Installed/attempted:
   - Gobuster / ffuf when packaged
   - sqlmap
   - Lynis
+  - ClamAV + freshclam signature updater
   - Docker + OWASP ZAP image
   - Semgrep (pipx)
   - pip-audit (pipx)

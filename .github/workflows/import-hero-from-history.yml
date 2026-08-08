@@ -1,0 +1,46 @@
+name: Import AgentSec hero from history
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/import-hero-from-history.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore and verify AgentSec hero
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: 12b99eac2418c859286768b76c618a6056bedae5
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .hero-import assets
+          for i in $(seq -w 0 19); do
+            gh api "repos/$GH_REPO/contents/.hero-parts/part-$i.b64?ref=$SOURCE_SHA" \
+              --jq .content | tr -d '\n' | base64 --decode > ".hero-import/part-$i.b64"
+          done
+
+          cat .hero-import/part-*.b64 | base64 --decode > assets/agentsec-hero.webp
+          test "$(stat -c%s assets/agentsec-hero.webp)" = "114160"
+          echo "089b485f0e80ebeb1fb16cf246ee75fa2d745a0c6e62769b44b87998e1e9c0cb  assets/agentsec-hero.webp" | sha256sum -c -
+          file assets/agentsec-hero.webp
+
+          sed -i 's#assets/agentsec-hero\.png#assets/agentsec-hero.webp#g' README.md
+
+          rm -rf .hero-import
+          rm -f .github/workflows/import-hero-from-history.yml
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Add AgentSec hero artwork"
+          git push

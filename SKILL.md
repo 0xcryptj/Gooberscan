@@ -3,10 +3,10 @@ name: agentsec
 description: >
   Senior-level defensive security auditing and remediation for vibe-coded and AI-assisted software projects. Use AgentSec to understand a repository efficiently, review application and server security, identify vulnerable or malicious dependencies, reason about architecture and least privilege, propose secure code rewrites, apply safe fixes, and verify the result with current security intelligence and deterministic tools.
 license: MIT
-compatibility: Linux/macOS/WSL. Python 3.10+ recommended. Network access improves advisory freshness. Optional tools include nmap, gobuster, ffuf, nikto, sqlmap, Docker/ZAP, lynis, ClamAV, npm, Semgrep, Trivy, OSV-Scanner, Gitleaks and ecosystem package auditors.
+compatibility: Linux/macOS/WSL. Python 3.10+ recommended. Network access improves advisory freshness. Optional tools include nmap, gobuster, ffuf, nikto, sqlmap, Docker/ZAP, lynis, ClamAV, npm, Semgrep, Trivy, OSV-Scanner, Gitleaks, Snyk CLI, SonarScanner/SonarQube evidence, Burp Suite findings and ecosystem package auditors.
 metadata:
   author: 0xcryptj
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # AgentSec
@@ -37,6 +37,32 @@ KISS does **not** mean weak security. It means:
 
 Do not introduce complexity unless the reduction in risk justifies the operational cost.
 
+## Standards-led auditing
+
+For substantial audits, read [references/standards-and-tools.md](references/standards-and-tools.md).
+
+AgentSec is standards-led and tool-assisted.
+
+Use these references for different jobs:
+
+- **OWASP ASVS 5.0.0** as the primary application-security requirements baseline
+- **OWASP Top 10:2025** as a high-level risk and communication taxonomy, not as a complete checklist
+- **OWASP WSTG** as the web-testing methodology for authorized application assessment
+- **CWE** to classify confirmed implementation weaknesses when a useful mapping exists
+- **CIS Benchmarks** as a hardening reference for supported operating systems, servers, containers, databases and cloud technologies
+- **NIST SSDF** as a secure-development and vulnerability-response reference for SDLC, CI/CD, dependencies and release practices
+
+Treat Burp Suite, SonarQube, Snyk, ZAP, Semgrep, Trivy, OSV-Scanner, Gitleaks, npm audit and similar products as **evidence sources**, not as the security standard itself.
+
+When several tools report the same underlying problem, correlate them into one root-cause finding. Preserve each source as evidence, but do not count duplicate scanner output as multiple vulnerabilities.
+
+Examples:
+
+- SonarQube or Snyk Code may identify a suspicious taint flow; confirm the actual source, sink and application context.
+- Burp may provide runtime DAST evidence that an authorized web issue is actually reachable or exploitable.
+- Snyk Open Source, npm audit, OSV or GitHub advisories may identify the same dependency vulnerability; trace the real dependency path and recommend one compatible remediation.
+- A CIS recommendation may improve a server baseline, but do not apply it blindly if it breaks the workload without materially reducing the relevant risk.
+
 ## Core behavior
 
 1. Determine scope: repository, architecture, application, server, dependencies, cloud/edge, or a combination.
@@ -44,7 +70,7 @@ Do not introduce complexity unless the reduction in risk justifies the operation
 3. Read the repository progressively and token-efficiently. Do not ingest the whole codebase by default.
 4. Refresh repository-relevant security intelligence when network access is available.
 5. Prefer non-destructive inspection and passive checks before active testing.
-6. Correlate scanner/advisory output with the actual code, configuration, dependency path, and architecture before declaring a vulnerability.
+6. Correlate scanner/advisory output with the actual code, configuration, dependency path, architecture and relevant security standard before declaring a vulnerability.
 7. Explain findings in plain language first, then provide technical evidence and implementation detail.
 8. Propose the smallest safe change that fixes the root cause.
 9. When changes are authorized, implement them in the existing stack rather than forcing an unnecessary migration.
@@ -113,7 +139,7 @@ The updater caches compact repository-specific intelligence under `.agentsec/int
 - GitHub-reviewed package vulnerability advisories affecting those packages
 - ClamAV signature refresh through `freshclam` when ClamAV is installed
 
-Then use current ecosystem scanners when installed, such as npm audit, OSV-Scanner, Trivy, pip-audit, cargo-audit, Semgrep, and Gitleaks.
+Then use current ecosystem scanners when installed, such as npm audit, OSV-Scanner, Trivy, pip-audit, cargo-audit, Semgrep, Gitleaks and Snyk. Correlate existing SonarQube or Snyk Code results when available rather than rerunning expensive analysis unnecessarily.
 
 Freshness rules:
 
@@ -210,6 +236,8 @@ Explicit active validation:
 ./agentsec web https://example.com --authorized --active
 ```
 
+Use OWASP WSTG to organize coverage. If Burp Suite or Burp DAST evidence is available, use its crawl and audit results to improve runtime coverage and correlate them with source/configuration. Treat Burp findings as evidence to verify and remediate, not as a replacement for architecture or code review.
+
 For exposed directories or Gobuster/ffuf findings, fix the actual exposure:
 
 1. decide whether the resource should be public
@@ -256,6 +284,8 @@ Authorized external exposure:
 ```
 
 Review patch state, listening services, unnecessary ports, SSH, firewalling, TLS, permissions, service accounts, systemd/cron privilege surfaces, Docker/socket exposure, reverse-proxy configuration, document roots, databases/caches, and Lynis output when available.
+
+Use the relevant CIS Benchmark as a reference when one exists, but preserve service requirements and KISS. A benchmark item is evidence for review, not permission to break the workload.
 
 See [references/server-security.md](references/server-security.md).
 
@@ -317,6 +347,7 @@ Then provide technical detail:
 - concrete remediation or secure rewrite plan
 - changes implemented, if requested
 - tests/security checks rerun
+- standards mappings when useful
 - freshness limitations and unresolved questions
 
 Do not report a scanner heuristic, stale advisory, or architectural guess as confirmed without checking the evidence.

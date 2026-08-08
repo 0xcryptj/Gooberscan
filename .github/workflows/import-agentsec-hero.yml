@@ -1,37 +1,61 @@
-name: Build AgentSec README hero
+name: Install AgentSec README artwork
 
 on:
-  pull_request:
+  push:
     branches: [main]
+    paths:
+      - .github/workflows/import-agentsec-hero.yml
 
 permissions:
   contents: write
 
 jobs:
-  build-hero:
-    if: github.head_ref == 'fix-inline-hero'
+  install-artwork:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: main
+          fetch-depth: 0
 
-      - name: Reconstruct and verify hero
+      - name: Reconstruct and verify artwork
         shell: bash
         run: |
           set -euo pipefail
           test "$(find .hero-parts -maxdepth 1 -type f -name 'part-*.b64' | wc -l)" = "20"
           mkdir -p assets
-          cat .hero-parts/part-*.b64 | base64 --decode > assets/agentsec-hero.webp
+          cat .hero-parts/part-*.b64 | tr -d '\n\r' | base64 --decode > assets/agentsec-hero.webp
           test "$(stat -c%s assets/agentsec-hero.webp)" = "114160"
           echo "089b485f0e80ebeb1fb16cf246ee75fa2d745a0c6e62769b44b87998e1e9c0cb  assets/agentsec-hero.webp" | sha256sum -c -
           file assets/agentsec-hero.webp
-          sed -i 's#assets/agentsec-hero\.png#assets/agentsec-hero.webp#g' README.md
-          rm -rf .hero-parts
-          rm -f .github/workflows/import-agentsec-hero.yml
 
+      - name: Put artwork at top of README
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('README.md')
+          text = p.read_text()
+          candidates = [
+              '<p align="center">\n  <img src="assets/agentsec-hero.png" alt="AgentSec - Spy on threats. Secure everything." width="100%" />\n</p>\n\n',
+              '<p align="center">\n  <img src="assets/agentsec-hero.webp" alt="AgentSec - Spy on threats. Secure everything." width="100%" />\n</p>\n\n',
+              '![AgentSec - Spy on threats. Secure everything.](assets/agentsec-hero.png)\n\n',
+              '![AgentSec - Spy on threats. Secure everything.](assets/agentsec-hero.webp)\n\n',
+              '![AgentSec - Spy on threats. Secure everything.](https://raw.githubusercontent.com/0xcryptj/AgentSec/main/assets/agentsec-hero.webp)\n\n',
+          ]
+          for old in candidates:
+              text = text.replace(old, '')
+          hero = '![AgentSec - Spy on threats. Secure everything.](https://raw.githubusercontent.com/0xcryptj/AgentSec/main/assets/agentsec-hero.webp)\n\n'
+          p.write_text(hero + text.lstrip())
+
+      - name: Commit finished image and remove transport files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .hero-parts
+          rm -f assets/agentsec-hero.png
+          rm -f .github/workflows/import-agentsec-hero.yml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
-          git commit -m "Add AgentSec hero artwork"
-          git push origin HEAD:${{ github.head_ref }}
+          git commit -m "Install AgentSec README artwork"
+          git push origin main

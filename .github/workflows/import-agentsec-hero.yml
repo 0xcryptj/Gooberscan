@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - .github/workflows/import-agentsec-hero.yml
+      - .hero-import-ready
 
 permissions:
   contents: write
@@ -52,6 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf .hero-parts
+          rm -f .hero-import-ready
           rm -f assets/agentsec-hero.png
           rm -f .github/workflows/import-agentsec-hero.yml
           git config user.name github-actions[bot]

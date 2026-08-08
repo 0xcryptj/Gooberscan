@@ -1,5 +1,7 @@
 # Install AgentSec
 
+[![AgentSec CI](https://github.com/0xcryptj/AgentSec/actions/workflows/agentsec-ci.yml/badge.svg)](https://github.com/0xcryptj/AgentSec/actions/workflows/agentsec-ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 The polished one-line installer installs AgentSec as a global skill for supported coding agents:
 
 ```bash
@@ -16,6 +18,14 @@ Or use the underlying skills CLI directly:
 
 ```bash
 npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -g -y
+```
+
+The wildcard target installs AgentSec across every agent supported by the `skills` CLI, including Codex, Claude Code, Cursor, Cline, Amp and other compatible coding agents. For one agent only, use its CLI identifier:
+
+```bash
+npx skills add 0xcryptj/AgentSec --skill agentsec --agent codex -g -y
+npx skills add 0xcryptj/AgentSec --skill agentsec --agent claude-code -g -y
+npx skills add 0xcryptj/AgentSec --skill agentsec --agent cursor -g -y
 ```
 
 Then say:
@@ -134,5 +144,6 @@ AgentSec separates **confirmed vulnerabilities**, **security design gaps**, **se
 - [`references/standards-and-tools.md`](references/standards-and-tools.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - [`SECURITY.md`](SECURITY.md)
+- [`CHANGELOG.md`](CHANGELOG.md)
 
 <p align="center"><strong>Audit. Reason. Remediate. Verify.</strong></p>

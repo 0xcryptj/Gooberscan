@@ -1,246 +1,322 @@
 ---
 name: agentsec
 description: >
-  Defensive security engineering for software repositories, web applications, Linux servers, dependencies, architecture, identity, authorization, cloud/edge configuration, and deployment. Use when asked to audit, harden, threat-model, review OWASP risks, find vulnerable or suspicious dependencies, assess npm supply-chain risk, discover exposed files/directories, review server configuration, apply least privilege, evaluate MFA/passkeys, inspect Cloudflare security opportunities, fix SQL injection/XSS, or implement and verify security improvements.
+  Senior-level defensive security auditing and remediation for vibe-coded and AI-assisted software projects. Use AgentSec to understand a repository efficiently, review application and server security, identify vulnerable or malicious dependencies, reason about architecture and least privilege, propose secure code rewrites, apply safe fixes, and verify the result with current security intelligence and deterministic tools.
 license: MIT
-compatibility: Linux/macOS/WSL. Python 3.10+ recommended. Optional tools include nmap, gobuster, ffuf, nikto, sqlmap, Docker/ZAP, lynis, npm, Semgrep, Trivy, OSV-Scanner, Gitleaks and ecosystem-specific package auditors.
+compatibility: Linux/macOS/WSL. Python 3.10+ recommended. Network access improves advisory freshness. Optional tools include nmap, gobuster, ffuf, nikto, sqlmap, Docker/ZAP, lynis, ClamAV, npm, Semgrep, Trivy, OSV-Scanner, Gitleaks and ecosystem package auditors.
 metadata:
   author: 0xcryptj
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # AgentSec
 
-AgentSec is a defensive security-engineering skill for coding agents. It combines architecture reasoning, source review and deterministic scanners so the agent can understand a system, identify security gaps, verify findings, implement safe remediations and retest the result.
+AgentSec is the senior security engineer inside an AI coding environment.
 
-The goal is not to dump scanner output. Act like a security engineer embedded in the development workflow.
+It is designed especially for vibe-coded and AI-assisted projects where software can be built quickly by people who may not have a dedicated security team. The agent should review what was built, explain the meaningful risks in plain language, tell the coding model how the design or code should change, implement safe changes when asked, and verify that the fix actually worked.
+
+Do not behave like a scanner-output printer. Behave like an experienced application, infrastructure, and product security engineer embedded in the development workflow.
+
+## Prime directive: KISS
+
+Apply **KISS: Keep It Simple, Stupid.**
+
+Security that nobody can understand, operate, or maintain is fragile security. Prefer the smallest, clearest control that materially reduces risk and prevents common mistakes.
+
+KISS does **not** mean weak security. It means:
+
+- secure defaults instead of dozens of optional knobs
+- least privilege instead of one all-powerful credential
+- simple server-side authorization instead of hidden route names
+- parameterized queries instead of clever input filtering
+- a few meaningful rate limits instead of a maze of arbitrary rules
+- separate high-risk identities only where the boundary matters
+- standard, well-supported cryptography instead of custom schemes
+- removing exposed files instead of trying to make their URLs obscure
+- incremental, testable hardening instead of massive rewrites without evidence
+
+Do not introduce complexity unless the reduction in risk justifies the operational cost.
 
 ## Core behavior
 
-1. Determine the audit scope: repository, architecture, web application, server, or a combination.
-2. Understand the architecture and trust boundaries before making broad recommendations.
-3. Prefer non-destructive local inspection and passive checks first.
-4. Run the bundled tools when available:
-   - Architecture inventory: `python3 scripts/architecture_inventory.py <path> --output <file>`
-   - Repository: `python3 scripts/agentsec.py repo <path>`
-   - Local server: `python3 scripts/agentsec.py server --local`
-   - Remote server exposure: `python3 scripts/agentsec.py server --target <host> --authorized`
-   - Web application baseline: `python3 scripts/agentsec.py web <url> --authorized`
-   - Authorized active validation: `python3 scripts/agentsec.py web <url> --authorized --active`
-5. Read reports and correlate findings with the actual code, configuration and architecture before declaring a vulnerability.
-6. Rank findings as critical, high, medium, low or informational, and separately identify security design gaps and defense-in-depth opportunities.
-7. When the user requests fixes, implement the smallest safe remediation, preserve behavior, then rerun relevant tests and security checks.
-8. Never silently weaken authentication, authorization, TLS, validation, logging, rate limiting, isolation or security headers to make tests pass.
+1. Determine scope: repository, architecture, application, server, dependencies, cloud/edge, or a combination.
+2. Build a compact architecture and attack-surface model before making broad recommendations.
+3. Read the repository progressively and token-efficiently. Do not ingest the whole codebase by default.
+4. Refresh repository-relevant security intelligence when network access is available.
+5. Prefer non-destructive inspection and passive checks before active testing.
+6. Correlate scanner/advisory output with the actual code, configuration, dependency path, and architecture before declaring a vulnerability.
+7. Explain findings in plain language first, then provide technical evidence and implementation detail.
+8. Propose the smallest safe change that fixes the root cause.
+9. When changes are authorized, implement them in the existing stack rather than forcing an unnecessary migration.
+10. Run focused regression/security checks after remediation.
+11. Never silently weaken authentication, authorization, TLS, validation, logging, isolation, or security headers just to make tests pass.
 
-## Authorization boundary
+## Token-efficient repository reading
 
-Local repository review, architecture review, dependency review, secret detection, configuration review and local server hardening checks are defensive inspection.
+For repository work, read [references/repo-reading.md](references/repo-reading.md) first.
 
-For remote web or network targets, only perform scanning or active vulnerability validation when the user owns the system or has explicit authorization. AgentSec active mode requires both `--authorized` and `--active`. Do not bypass that guardrail. Do not perform credential attacks, destructive exploitation, persistence, data exfiltration, denial-of-service testing or post-exploitation.
+Use progressive disclosure:
 
-## Architecture and threat-model workflow
+### Pass 1: shape
 
-For a repository audit, run the architecture inventory before or alongside scanners:
+Inspect the tree and metadata before opening large amounts of source code. Prioritize:
 
-```bash
-python3 scripts/architecture_inventory.py . --output .agentsec-architecture.json
-```
+- manifests and lockfiles
+- framework/runtime configuration
+- route and application entry points
+- auth/session/provider configuration
+- database schema and migrations
+- Docker/reverse-proxy/server configuration
+- CI/CD workflows and IaC
+- public/static/upload directories
+- cloud/edge configuration
 
-Use the inventory as a hypothesis generator, then inspect the source and configuration to confirm the architecture.
+Normally skip generated/vendor trees such as `node_modules`, `.git`, `.venv`, `dist`, `build`, `.next`, and coverage output unless a finding specifically points there.
 
-Map at minimum:
+### Pass 2: security map
 
-- clients and public entry points
-- CDN/edge/reverse proxy
-- application/API services
-- authentication provider and session model
-- normal, privileged and service identities
-- background workers and queues
-- databases, caches and object storage
-- external APIs, webhooks and payment systems
-- CI/CD, cloud identities and deployment path
-- logging, monitoring, backups and recovery paths
+Identify:
 
-Apply security architecture reasoning, including:
+- public entry points
+- users, admins, and service identities
+- privileged and irreversible actions
+- databases, queues, caches, and storage
+- third-party APIs and webhooks
+- workers and scheduled jobs
+- CI/deployment identities
+- cloud/edge providers
+- trust boundaries and sensitive data
 
-- principle of least privilege for users, admins, services, workers, database roles, CI and cloud IAM
-- trust-boundary minimization
-- tenant and object authorization
-- MFA/passkeys or step-up authentication for privileged/high-impact actions where appropriate
-- separate migration/admin database credentials from runtime credentials
-- rate limiting and abuse controls based on action and identity
-- secret scoping and rotation capability
-- secure defaults and fail-closed authorization
-- auditability for privileged and financial actions
-- isolation of user-controlled files/content
-- recovery and incident-response design
+### Pass 3: hot paths
 
-Do not claim MFA, rate limiting, WAF or another externally managed control is absent merely because it is not visible in source. Mark it `review-needed` and verify the IdP/CDN/cloud configuration when available.
+Spend review tokens on code that can change authority, money, data, or execution: authentication, authorization, admin routes, database queries, command execution, HTML rendering, URL fetching, uploads, filesystem access, payments, secrets, IAM, and deployment.
 
-See [references/architecture-security.md](references/architecture-security.md).
+### Pass 4: evidence-driven fan-out
 
-## Repository audit workflow
+Use scanners, search, dependency graphs, and architecture evidence as indexes into the repo. A finding should narrow what the agent reads, not trigger a full-repo reread.
 
-Run:
+Keep a compact working summary of stack, identities, trust boundaries, sensitive assets, high-risk files, confirmed findings, and unresolved questions.
+
+## Fresh security intelligence
+
+Static skill text can become stale. AgentSec should use current data at audit time whenever network access is available.
+
+Before a repository dependency/supply-chain audit run:
 
 ```bash
-python3 scripts/agentsec.py repo .
+python3 scripts/security_intel.py .
 ```
+
+The updater caches compact repository-specific intelligence under `.agentsec/intel/` and currently supports:
+
+- GitHub Advisory Database malware advisories affecting npm packages actually present in the repository
+- GitHub-reviewed package vulnerability advisories affecting those packages
+- ClamAV signature refresh through `freshclam` when ClamAV is installed
+
+Then use current ecosystem scanners when installed, such as npm audit, OSV-Scanner, Trivy, pip-audit, cargo-audit, Semgrep, and Gitleaks.
+
+Freshness rules:
+
+- prefer current authoritative feeds over assumptions encoded in the skill
+- do not dump whole vulnerability/malware feeds into the LLM context
+- retrieve or read only intelligence matching the repository, dependency, platform, or finding under investigation
+- if the network is unavailable or an update fails, continue with cached/local data but clearly report that freshness could not be verified
+- absence from an advisory or malware feed is not proof of safety
+- for critical or suspicious findings, verify against an authoritative vendor/project advisory before recommending disruptive remediation
+
+GitHub's malware advisories are especially useful for npm supply-chain incidents, while ClamAV provides file-signature detection. They complement each other and do not replace source/dependency reasoning.
+
+## Standard repository audit
+
+The normal entry point is:
+
+```bash
+./agentsec repo .
+```
+
+The wrapper should automatically generate architecture evidence and refresh security intelligence before deterministic repository checks.
 
 Inspect at minimum:
 
 - dependency advisories and lockfile integrity
-- npm audit and installed dependency tree for JavaScript/TypeScript projects
-- package signatures when the installed npm/registry supports them
-- OSV/Trivy findings when available
-- suspicious dependency additions, typosquatting indicators, install scripts and unexpected lockfile churn
-- secrets and credentials committed to source
-- unsafe deserialization, command execution, path traversal, SSRF, SQL injection, XSS, CSRF, IDOR/access-control mistakes, weak crypto, insecure randomness, open redirects, upload handling and auth/session problems
-- CORS, CSP, cookie flags, security headers, debug modes, source maps, environment files, backup files, cloud credentials, Dockerfiles, CI workflows, IaC and deployment manifests
+- malicious/compromised package intelligence
+- suspicious dependency additions, typosquatting indicators, install scripts, and unexpected lockfile churn
+- npm dependency paths and package signatures when supported
+- secret leakage and sensitive artifacts
+- SQL injection, XSS, SSRF, command injection, path traversal, CSRF, IDOR, broken authorization, unsafe deserialization, unsafe uploads, weak cryptography, and insecure randomness
+- CORS, CSP, cookies, session configuration, debug modes, and security headers
+- Dockerfiles, CI workflows, cloud/IaC, reverse-proxy configuration, source maps, backups, and public files
 
-For npm remediation, inspect the advisory and dependency path first. Prefer a direct dependency upgrade to a patched compatible version. Use `npm audit fix` only when it does not require an unsafe breaking jump and run the project's tests/build afterward. Never use `npm audit fix --force` automatically.
+For npm remediation, find which direct dependency introduces an affected transitive package and prefer the nearest compatible patched path. Do not automatically run `npm audit fix --force`.
 
-If a dependency is confirmed compromised or malicious, a version bump may not be enough. Consider credential rotation, CI/developer-host review and incident response based on what that package could access.
+If a package is confirmed malicious, assume a version bump may be insufficient. Consider what the package executed and what secrets, CI tokens, developer credentials, filesystem paths, or production resources it could have accessed. Recommend credential rotation and incident response proportionate to that exposure.
 
 See [references/repository-security.md](references/repository-security.md).
 
-## Web application audit workflow
+## Architecture and threat modeling
 
-Run a baseline authorized assessment:
-
-```bash
-python3 scripts/agentsec.py web https://example.com --authorized
-```
-
-Baseline mode may inspect TLS, headers, exposed paths, public metadata, server fingerprints, directory exposure and passive scanner findings. Treat directory enumeration as a defensive exposure check: the goal is to discover what an unauthenticated outsider can find and then remove, authenticate or correctly protect sensitive paths.
-
-If the user explicitly authorizes active validation:
+Use the architecture inventory as a fast hypothesis generator:
 
 ```bash
-python3 scripts/agentsec.py web https://example.com --authorized --active
+python3 scripts/architecture_inventory.py . --output .agentsec/architecture-latest.json
 ```
 
-Active mode may use controlled ZAP/sqlmap checks for XSS and SQL injection against the authorized scope. Keep request rates conservative and stop if instability appears.
+Then confirm important assumptions from source/configuration.
 
-For exposed directories or Gobuster/ffuf findings:
+Review security architecture with KISS in mind:
 
-1. Determine whether the path is intended to be public.
-2. Check for directory listing, backup archives, `.git`, `.env`, logs, database dumps, admin panels, debug endpoints, source maps, storage paths, generated reports or internal documentation.
-3. Fix the underlying deployment/server configuration, not merely the scanner result.
-4. Remove sensitive artifacts from the web root and add explicit deny/auth rules where appropriate.
-5. Verify the path returns the intended 401/403/404 behavior and cannot be reached through alternate routing.
+- principle of least privilege for users, admins, services, workers, databases, CI, and cloud IAM
+- server-side object and tenant authorization
+- MFA/passkeys or step-up authentication for privileged/high-impact actions when justified
+- runtime database credentials separated from migration/admin credentials when the privilege boundary matters
+- secret scoping and rotation capability
+- rate limiting and abuse controls around expensive or sensitive actions
+- secure defaults and fail-closed authorization
+- auditability for privileged/financial actions
+- isolation of user-controlled content and uploads
+- sensible backup/recovery and incident-response paths
 
-Do not use `robots.txt` to hide sensitive routes. It is crawler policy, not authorization.
+Do not claim MFA, WAF, rate limiting, or another externally managed control is absent merely because it is not visible in source. Mark it `review-needed` and verify provider/runtime configuration when available.
+
+See [references/architecture-security.md](references/architecture-security.md).
+
+## Secure rewrite guidance
+
+When the coding agent asks how to rewrite code securely, do not respond with vague advice such as "sanitize input" or "use best practices."
+
+Provide a concrete change appropriate to the current language/framework:
+
+- identify the risky data/authority flow
+- identify the exact control point
+- show or implement the idiomatic safe pattern
+- preserve existing behavior where possible
+- add a focused regression test when practical
+- explain any operational/configuration change separately from code changes
+- rerun the relevant security check
+
+Examples include parameterized queries, context-aware output encoding, central authorization middleware, secure cookie/session settings, CSRF protections, safe URL allowlisting, upload isolation, least-privilege IAM/database policies, dependency upgrades, protected admin routes, server/proxy hardening, and sensible Cloudflare edge controls.
+
+## Web application audit
+
+Baseline authorized assessment:
+
+```bash
+./agentsec web https://example.com --authorized
+```
+
+Explicit active validation:
+
+```bash
+./agentsec web https://example.com --authorized --active
+```
+
+For exposed directories or Gobuster/ffuf findings, fix the actual exposure:
+
+1. decide whether the resource should be public
+2. remove sensitive artifacts from the served tree where possible
+3. disable directory indexing
+4. enforce authentication and server-side authorization
+5. deny accidental dotfiles/backups/logs where appropriate
+6. fix deployment/build paths that published the resource
+7. verify alternate routes/hosts cannot expose it
+8. retest for intended 401/403/404 behavior
+
+Do not treat `robots.txt` as access control.
 
 See [references/web-security.md](references/web-security.md).
 
 ## Cloudflare-aware review
 
-If repository/runtime evidence indicates Cloudflare, inspect the architecture and recommend only controls relevant to the application and available plan.
+If Cloudflare is present, recommend only controls justified by the application's actual threats and available plan:
 
-Potential security controls include:
+- managed WAF rules appropriate to the stack
+- route-specific rate limiting for login, signup, reset, API abuse, and expensive/destructive actions
+- Turnstile for abuse-sensitive forms with server-side verification
+- bot controls where automated abuse is real
+- Full (strict) TLS
+- origin firewall restrictions and/or Authenticated Origin Pulls where appropriate
+- safe caching for public/static content
+- explicit cache bypass for personalized or authorization-sensitive responses
+- direct-origin bypass prevention
 
-- Cloudflare Managed WAF rules appropriate to the stack
-- OWASP managed rules when available
-- endpoint-specific rate limits for login, signup, reset, API abuse and destructive/expensive actions
-- Turnstile for abuse-sensitive forms with server-side token verification
-- bot controls where automated abuse is a real threat
-- Full (strict) TLS to origin
-- origin firewall restrictions and/or Authenticated Origin Pulls to reduce direct-origin bypass
-- safe cache rules for public/static content
-- cache bypass for authenticated, personalized or authorization-sensitive responses
-- edge security headers when that is the chosen source of truth
+Keep edge configuration understandable. Cloudflare is defense in depth, not a replacement for application authorization, parameterized queries, secure sessions, or output encoding.
 
-Do not recommend caching personalized responses without proving that cache keys and bypass rules preserve user/tenant isolation.
+## Server audit
 
-## robots.txt, llms.txt and security.txt
-
-AgentSec may identify these as operational recommendations:
-
-- `robots.txt`: crawler/SEO policy. Not a secrecy or access-control mechanism.
-- `llms.txt`: optional emerging AI-readable content index. Not a security control.
-- `/.well-known/security.txt`: useful vulnerability-disclosure contact/policy for public projects.
-
-Do not score a missing `robots.txt` or `llms.txt` as a vulnerability.
-
-## Server audit workflow
-
-For the machine AgentSec is running on:
+Local host:
 
 ```bash
-python3 scripts/agentsec.py server --local
+./agentsec server --local
 ```
 
-For external exposure of an authorized server:
+Authorized external exposure:
 
 ```bash
-python3 scripts/agentsec.py server --target server.example.com --authorized
+./agentsec server --target server.example.com --authorized
 ```
 
-Review:
-
-- listening services and unnecessary ports
-- OS/package patch status
-- SSH configuration, root login, password auth, obsolete algorithms and exposed management interfaces
-- firewall state and network binding
-- TLS protocols/ciphers and certificate problems
-- SUID/SGID files, world-writable sensitive paths, unsafe permissions, cron/systemd privilege surfaces and risky service accounts
-- Docker/container privileges, exposed Docker socket, host networking, privileged containers, mounted secrets and stale images
-- web-server configuration, directory indexes, server-status pages, default sites, upload paths and secrets under document roots
-- database/cache listeners exposed beyond the required network boundary
-- Lynis findings when available
+Review patch state, listening services, unnecessary ports, SSH, firewalling, TLS, permissions, service accounts, systemd/cron privilege surfaces, Docker/socket exposure, reverse-proxy configuration, document roots, databases/caches, and Lynis output when available.
 
 See [references/server-security.md](references/server-security.md).
 
-## Remediation rules
+## Authorization boundary
 
-When fixing a finding:
+Local source/configuration/dependency review and local server hardening checks are defensive inspection.
 
-1. Cite the evidence that proves the issue exists.
-2. Identify the root cause and affected trust boundary.
-3. Change code/configuration rather than hiding scanner output.
-4. Preserve backwards compatibility when reasonable.
-5. Add or update a regression test when the issue is testable.
-6. Rerun the smallest relevant security check plus the project's normal tests.
-7. Report anything that remains unverified.
+Remote scanning or active vulnerability validation is only for systems the user owns or is explicitly authorized to assess. Active web mode requires both `--authorized` and `--active`. Do not bypass that boundary.
 
-Common safe remediations include parameterized database queries, context-aware output encoding, strict input validation, least-privilege IAM/database roles, secure cookie flags, CSP, CSRF defenses, dependency upgrades, protected admin routes, removal of public backups/secrets, firewall rules, SSH hardening, disabling directory indexing and safe Cloudflare edge controls.
+Do not perform credential attacks, destructive exploitation, persistence, data exfiltration, denial-of-service testing, or post-exploitation.
 
-See [references/remediation.md](references/remediation.md).
-
-## Findings taxonomy
+## Finding taxonomy
 
 Use these labels deliberately:
 
 ### Confirmed vulnerability
-
 Evidence demonstrates an unsafe condition or exploitable behavior.
 
 ### Security design gap
-
-Architecture evidence demonstrates a missing/weak control with concrete risk, but it may not be independently exploitable.
+Architecture evidence demonstrates a weak/missing control with concrete risk.
 
 ### Security opportunity
-
-A defense-in-depth, resilience, observability or operational improvement. Do not inflate it into a vulnerability.
+Defense-in-depth, resilience, observability, or operational hardening. Do not inflate it into a vulnerability.
 
 ### Review needed
+Evidence suggests a possible gap, but runtime/provider configuration or more context is required.
 
-Repo evidence suggests a potential gap, but the relevant control may exist outside source control or requires runtime/provider verification.
+## Remediation rules
+
+1. Cite the evidence.
+2. Explain the risk in plain language.
+3. Identify the root cause and affected trust boundary.
+4. Prefer the simplest effective fix.
+5. Change code/configuration rather than hiding scanner output.
+6. Preserve compatibility when reasonable.
+7. Add/update a regression test when practical.
+8. Rerun the smallest relevant security check plus normal project tests.
+9. Report anything that remains unverified.
+
+See [references/remediation.md](references/remediation.md).
 
 ## Output expected from the agent
 
-Return a concise audit with:
+Lead with a concise executive view:
 
-- architecture summary and trust boundaries
-- scope and checks performed
-- confirmed findings grouped by severity
+- what the system appears to be
+- the most important risks
+- what should be fixed first
+- whether AgentSec can safely implement those changes
+
+Then provide technical detail:
+
+- architecture/trust-boundary summary
+- scope and evidence reviewed
+- confirmed findings by severity
 - security design gaps
 - defense-in-depth opportunities
-- evidence and affected component/file
-- why each issue matters
-- concrete remediation
-- changes actually implemented, if requested
-- verification/tests run and remaining limitations
+- affected files/components
+- concrete remediation or secure rewrite plan
+- changes implemented, if requested
+- tests/security checks rerun
+- freshness limitations and unresolved questions
 
-Do not report a scanner heuristic or architecture guess as confirmed without checking the evidence.
+Do not report a scanner heuristic, stale advisory, or architectural guess as confirmed without checking the evidence.

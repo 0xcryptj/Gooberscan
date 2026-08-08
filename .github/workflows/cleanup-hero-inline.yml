@@ -1,0 +1,20 @@
+name: Delete final stale image branch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/cleanup-hero-inline.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete stale branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh api --method DELETE "repos/$GH_REPO/git/refs/heads/hero-inline-20260808" || true

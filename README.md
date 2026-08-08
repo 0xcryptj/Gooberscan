@@ -1,327 +1,421 @@
-# AgentSec
+<p align="center">
+  <img src="assets/agentsec-banner.jpg" alt="AgentSec project banner" width="100%" />
+</p>
 
-**Agentic Security Auditing & Remediation**
+<h1 align="center">AgentSec</h1>
+<p align="center"><strong>Agentic Security Auditing & Remediation</strong></p>
+<p align="center">
+  A portable security engineering skill for AI coding agents that can understand architecture, audit code and infrastructure, identify security design gaps, implement defensive fixes, and verify the result.
+</p>
 
-AgentSec is a portable security-engineering skill for AI coding agents. It gives Claude Code, Codex, Cursor, GitHub Copilot and other Agent Skills-compatible tools a repeatable workflow for understanding an application's architecture, auditing repositories and servers, finding security weaknesses, proposing architectural improvements, applying safe fixes and verifying the result.
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" />
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-white" />
+  <img alt="Agent Skills" src="https://img.shields.io/badge/Agent%20Skills-Compatible-black" />
+  <img alt="Security" src="https://img.shields.io/badge/Security-First-b91c1c" />
+</p>
 
-AgentSec replaces the original Gooberscan design. The old project was primarily a scanner orchestrator. AgentSec keeps deterministic scanners, but puts an architecture-aware security skill above them so an AI coding agent can reason about **why** a control is needed and **where** to implement it.
+<p align="center">
+  <a href="#quick-install-for-agents">Quick Install</a> ·
+  <a href="#what-agentsec-does">Capabilities</a> ·
+  <a href="#how-agentsec-thinks">Security Model</a> ·
+  <a href="#usage">Usage</a> ·
+  <a href="#documentation">Documentation</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
-> **Authorized defensive use only.** Only scan remote systems you own or have explicit permission to assess. AgentSec does not enable credential attacks, destructive exploitation, persistence, data exfiltration, denial-of-service testing or post-exploitation.
+> [!IMPORTANT]
+> AgentSec is built for defensive development and authorized security assessment. Only scan remote systems you own or are explicitly permitted to assess. Active web validation is intentionally opt-in.
 
-## Why AgentSec
+## Quick Install for Agents
 
-A scanner might tell you that port 5432 is open or that a package has a CVE. AgentSec is designed to go further:
+Install AgentSec globally for every agent supported by the open `skills` CLI:
 
-- "Your application runtime appears to use the same database identity as migrations. Split these credentials and grant the runtime only the table actions it needs."
-- "This project has privileged/admin roles and authentication, but no MFA/passkey implementation is visible. Check the external identity provider, then consider MFA or step-up authentication for privileged actions."
-- "Cloudflare is already in the architecture. Consider Managed WAF rules, route-specific rate limiting, Turnstile for abuse-sensitive forms and origin lockdown so attackers cannot bypass the edge."
-- "Gobuster found a backup path. Do not rename it and call it fixed. Remove the backup from the web root, disable indexing and verify access controls on the entire route tree."
-- "This npm advisory is transitive through dependency X. Upgrade the compatible direct dependency, rerun the tests, then rerun the audit."
-- "A `robots.txt` file may be useful for crawler policy, but it cannot protect a private route."
+```bash
+npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -g -y
+```
 
-That is the core idea: **find -> understand -> verify -> harden -> fix -> retest**.
+That is the one-liner to give Claude Code, Codex, Cursor, GitHub Copilot, and other compatible coding agents.
 
-## What AgentSec audits
+Install only for a few agents:
 
-| Area | Examples |
-| --- | --- |
-| Architecture | trust boundaries, privileged identities, least privilege, service separation, MFA/passkey opportunities, tenant isolation, recovery flows |
-| Source code | SQL injection, XSS, command injection, SSRF, path traversal, unsafe deserialization, auth/authz bugs, IDOR, CSRF, insecure crypto, uploads |
-| Dependencies | npm advisories/tree/signatures, suspicious package changes, OSV, Trivy, pip-audit, cargo-audit |
-| Supply chain | lockfile integrity, install scripts, secret leakage, CI permissions, third-party actions, compromised-package response |
-| Secrets | `.env`, keys, tokens, cloud credentials, database files, backups, logs and sensitive deployment artifacts |
-| Web exposure | TLS, headers, CORS, CSP, exposed directories/files, Gobuster/ffuf, Nikto, ZAP baseline |
-| Authorized active validation | controlled SQL injection validation with sqlmap and XSS/web testing with ZAP |
-| Linux servers | patch status, listeners, SSH, firewall, SUID/SGID, permissions, cron/systemd, Nginx/Apache, Docker, databases, Lynis |
-| Cloud/edge | Cloudflare WAF, rate limits, Turnstile, origin protection, TLS and caching boundaries when Cloudflare is detected |
-| Operational security | `security.txt`, crawler policy, logging/auditability and incident-response readiness |
+```bash
+npx skills add 0xcryptj/AgentSec --skill agentsec -g -a claude-code -a codex -a cursor -y
+```
 
-## Portable Agent Skill
+Install into the current project instead of globally:
 
-AgentSec follows the open Agent Skills format. The repository contains a root [`SKILL.md`](SKILL.md), executable scripts and progressively loaded security references.
+```bash
+npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -y
+```
+
+Update later with:
+
+```bash
+npx skills update agentsec -y
+```
+
+See [`docs/INSTALLATION.md`](docs/INSTALLATION.md) for agent paths, local installation, troubleshooting, and scanner dependencies.
+
+## What AgentSec Does
+
+AgentSec is not just a wrapper around scanners. It combines deterministic security tools with architecture-aware reasoning so an AI coding agent can move through a full defensive loop:
 
 ```text
-AgentSec/
-├── SKILL.md
-├── README.md
-├── agentsec
-├── install-deps.sh
-├── scripts/
-│   ├── agentsec.py
-│   ├── architecture_inventory.py
-│   └── local_server_audit.sh
-└── references/
-    ├── architecture-security.md
-    ├── repository-security.md
-    ├── web-security.md
-    ├── server-security.md
-    └── remediation.md
+DISCOVER -> MODEL -> AUDIT -> VERIFY -> REMEDIATE -> RETEST
 ```
 
-The same skill can be installed into multiple coding agents rather than maintaining separate Claude/Codex/Cursor prompts.
+| Capability | What AgentSec looks for |
+| --- | --- |
+| Application security | SQL injection, XSS, SSRF, command injection, path traversal, CSRF, IDOR, unsafe uploads, weak crypto, auth/session problems |
+| Architecture | trust boundaries, service identities, tenant isolation, privilege boundaries, data flows, irreversible operations |
+| Least privilege | overpowered database users, workers, CI identities, cloud IAM roles, API tokens, admin paths, service accounts |
+| Identity | MFA, passkeys, step-up auth, session controls, recovery flows, privileged account separation |
+| Supply chain | vulnerable npm packages, malicious package signals, dependency trees, package signatures, lockfile integrity, install scripts |
+| Secrets | credentials, keys, `.env` files, database dumps, backups, cloud tokens, logs and sensitive deployment artifacts |
+| Web exposure | TLS, headers, CSP, CORS, exposed files, directory indexing, Gobuster/ffuf findings, Nikto, ZAP baseline |
+| Server security | patch state, listeners, SSH, firewall, SUID/SGID, permissions, systemd/cron, Docker, web roots, database exposure |
+| Cloud and edge | Cloudflare WAF, rate limits, Turnstile, origin lockdown, TLS mode, cache boundaries, public bucket exposure |
+| CI/CD | token scope, workflow permissions, third-party actions, secret handling, deployment identity privilege |
+| Operational security | `security.txt`, logging, auditability, incident readiness, crawler policy, public metadata |
+| Remediation | targeted code/config fixes, regression tests, reruns of the relevant security checks |
 
-## Install the skill
+## Why an Agent Skill
 
-After this repository is renamed to `AgentSec`:
+Traditional scanners answer questions like:
+
+> Is port 5432 open?
+
+AgentSec is designed to ask the next questions:
+
+> Why is Postgres reachable from that network? Which service actually needs it? Can the application bind privately and use a narrower database role?
+
+A package scanner may report a vulnerable transitive dependency. AgentSec should determine which direct dependency introduced it, whether a patched compatible path exists, whether the package executed install scripts, what credentials may have been exposed, and what must be retested after remediation.
+
+A route scanner may discover `/backup.zip`. AgentSec should not recommend renaming it. It should remove the archive from the public web root, inspect the deployment process that put it there, disable directory indexing, verify authorization, and retest alternate routes and hosts.
+
+## How AgentSec Thinks
+
+Before recommending controls, AgentSec builds a lightweight security model of the application.
+
+### 1. Map the architecture
+
+It looks for:
+
+- public clients and entry points
+- APIs and server actions
+- users, admins and service identities
+- databases, queues, caches and object storage
+- webhooks and third-party integrations
+- workers and scheduled jobs
+- CI/CD and deployment identities
+- cloud/edge providers
+- privileged and irreversible operations
+
+The repository inventory is generated by:
 
 ```bash
-npx skills add 0xcryptj/AgentSec --skill agentsec
+python3 scripts/architecture_inventory.py . --output architecture.json
 ```
 
-To target the three main coding agents explicitly:
+### 2. Identify trust boundaries
+
+AgentSec asks where data or authority crosses boundaries, for example:
+
+```text
+Browser
+  |
+  v
+Cloudflare edge
+  |
+  v
+Application/API
+  |       \
+  v        v
+Postgres   Worker
+             |
+             v
+          Queue/R2
+```
+
+It then reviews whether each transition has the right authentication, authorization, validation, encryption, rate limiting, and observability.
+
+### 3. Apply least privilege
+
+AgentSec evaluates privilege at multiple layers:
+
+- Does the runtime database user also own the schema?
+- Can a background worker access tables or buckets it never needs?
+- Does CI have write permissions when read-only would work?
+- Are cloud IAM policies broader than the deployed service requires?
+- Do API keys and OAuth tokens have excessive scopes?
+- Are admin controls enforced server-side, not only in the UI?
+- Can one compromised service identity reach unrelated systems?
+
+### 4. Evaluate identity controls
+
+When privileged or high-impact actions exist, AgentSec considers:
+
+- MFA
+- passkeys / WebAuthn
+- step-up authentication
+- session lifetime and rotation
+- recovery flow abuse
+- privileged account separation
+- brute force and credential stuffing controls
+
+Absence of MFA code in the repo is not automatically treated as proof that MFA is missing. External IdPs may enforce it. AgentSec labels uncertain cases as `review-needed` until runtime/provider configuration is checked.
+
+### 5. Use existing infrastructure intelligently
+
+If Cloudflare is detected, AgentSec can recommend and reason about:
+
+- Managed WAF rules
+- endpoint-specific rate limiting
+- login, signup and password-reset abuse controls
+- Turnstile on abuse-sensitive forms
+- bot protections where appropriate
+- Full (strict) TLS
+- origin firewall restrictions
+- Authenticated Origin Pulls where appropriate
+- cache bypass for personalized or authorization-sensitive responses
+- direct-origin bypass prevention
+
+Cloudflare is defense in depth. AgentSec does not treat edge controls as a replacement for application authorization, parameterized queries, secure sessions, or output encoding.
+
+## Finding Classes
+
+AgentSec avoids painting every suggestion bright red.
+
+| Class | Meaning |
+| --- | --- |
+| **Confirmed vulnerability** | Evidence demonstrates an unsafe condition. |
+| **Security design gap** | The architecture has a concrete weakness or missing control. |
+| **Security opportunity** | Defense-in-depth, resilience or operational hardening would reduce risk. |
+| **Review needed** | Repo evidence suggests a possible gap, but runtime or provider configuration must be verified. |
+
+## Usage
+
+### Audit a repository
 
 ```bash
-npx skills add 0xcryptj/AgentSec \
-  --skill agentsec \
-  --agent claude-code \
-  --agent codex \
-  --agent cursor
+./agentsec repo .
 ```
 
-Install globally if you want AgentSec available across projects:
+The repository audit can use:
 
-```bash
-npx skills add 0xcryptj/AgentSec --skill agentsec --global
-```
-
-While the GitHub repository is still named `Gooberscan`, install from a local clone:
-
-```bash
-git clone https://github.com/0xcryptj/Gooberscan.git AgentSec
-cd AgentSec
-git checkout agent-skill-v1
-npx skills add . --skill agentsec
-```
-
-If a particular agent does not discover an installed skill automatically, copy or symlink the `agentsec` skill directory into that agent's documented skills directory. The Agent Skills ecosystem is evolving quickly, so the repository itself remains the canonical source.
-
-## Install security tools
-
-AgentSec can provide security reasoning without every scanner installed, but deterministic tooling makes audits substantially stronger.
-
-Debian / Ubuntu / WSL:
-
-```bash
-chmod +x install-deps.sh agentsec scripts/local_server_audit.sh
-sudo ./install-deps.sh
-```
-
-Then:
-
-```bash
-./agentsec --help
-```
-
-Optional tools AgentSec understands include:
-
-- Nmap
-- Gobuster / ffuf
-- Nikto
-- sqlmap
-- OWASP ZAP
-- Lynis
 - npm audit
+- npm dependency tree analysis
+- npm package signature checks when supported
 - OSV-Scanner
 - Trivy
 - Semgrep
 - Gitleaks
 - pip-audit
 - cargo-audit
+- sensitive artifact discovery
+- architecture inventory
 
-Missing optional tools are reported and skipped rather than causing the entire audit to fail.
-
-## Quick start
-
-### 1. Audit architecture
-
-```bash
-python3 scripts/architecture_inventory.py . --output architecture.json
-```
-
-This inventories framework/auth/database/cloud/worker/storage/security signals and gives the AI agent evidence to investigate.
-
-The inventory intentionally labels many architectural recommendations as `review-needed`. For example, MFA may be enforced by Auth0 or another IdP outside the repository, so absence from source is not proof that MFA is missing.
-
-### 2. Audit a repository
-
-```bash
-./agentsec repo .
-```
-
-AgentSec checks the dependency/supply-chain surface, sensitive artifacts and available static/security scanners.
-
-For conservative package-manager remediation:
+### Conservative dependency remediation
 
 ```bash
 ./agentsec repo . --fix
 ```
 
-AgentSec will **not** automatically use `npm audit fix --force`.
+AgentSec deliberately does not run `npm audit fix --force` automatically.
 
-### 3. Audit the local Linux server
+### Audit the local Linux host
 
 ```bash
 ./agentsec server --local
 ```
 
-The host audit is read-only. It reviews patch state, listening services, firewall/SSH configuration, permissions, web roots, Docker exposure, databases/admin ports, cron/systemd and Lynis output where available.
+The host audit is read-only and checks areas such as:
 
-### 4. Audit an authorized server externally
+- patch state
+- exposed listeners
+- SSH settings
+- firewall state
+- SUID/SGID binaries
+- sensitive file permissions
+- systemd and cron surfaces
+- Docker privileges and socket exposure
+- web server configuration
+- public document roots
+- database and cache listeners
+- Lynis results when installed
+
+### Audit an authorized server externally
 
 ```bash
 ./agentsec server --target server.example.com --authorized
 ```
 
-This reviews the exposed network/service surface. For configuration-level findings, run the local host audit on the server as well.
-
-### 5. Audit an authorized web app
+### Audit an authorized web application
 
 ```bash
 ./agentsec web https://staging.example.com --authorized
 ```
 
-For explicitly authorized active SQLi/XSS validation:
+### Explicitly enable controlled active validation
 
 ```bash
 ./agentsec web https://staging.example.com --authorized --active
 ```
 
-Active validation is deliberately opt-in.
+Active mode may run controlled SQL injection and web vulnerability validation using available tools such as sqlmap and OWASP ZAP. Credential attacks, persistence, destructive exploitation, data theft, denial-of-service testing and post-exploitation are outside AgentSec's workflow.
 
-## Architecture-aware security review
+## Directory and Path Exposure
 
-The skill instructs the coding agent to build an application security model before blindly recommending controls.
+AgentSec assumes that routes can be guessed, crawled, indexed or enumerated.
 
-It identifies:
+When Gobuster or ffuf discovers a sensitive path, AgentSec's remediation model is:
 
-- public and internal entry points
-- users, admins and service identities
-- databases, queues, caches and object storage
-- webhooks and third-party integrations
-- CI/CD and deployment identities
-- privilege boundaries
-- sensitive or irreversible actions
+1. Decide whether the resource should be public at all.
+2. Remove sensitive artifacts from the served tree whenever possible.
+3. Disable directory indexing.
+4. Enforce authentication and server-side authorization on protected paths.
+5. Deny accidental dotfiles, source-control metadata, backups and logs where appropriate.
+6. Fix build/deployment scripts that publish sensitive files.
+7. Check aliases, symlinks, alternate hosts and alternate routing.
+8. Retest the path and verify the intended 401, 403 or 404 behavior.
 
-Then it evaluates opportunities such as:
+Renaming `/admin`, hiding a route in `robots.txt`, or relying on an obscure URL is not considered a security fix.
 
-### Principle of least privilege
+## Supply Chain and Compromised Packages
 
-AgentSec looks beyond user roles. It asks whether:
+For Node.js projects AgentSec reviews more than the advisory count.
 
-- the runtime database user needs schema-owner rights
-- a worker needs access to every table/bucket
-- CI needs write/admin permissions
-- a cloud IAM role can be narrowed
-- API/OAuth tokens have excess scopes
-- admins and ordinary users are enforced differently on the server
+It considers:
 
-### MFA and step-up authentication
+- direct and transitive dependency paths
+- affected and patched versions
+- unexpected new packages
+- typosquatting and naming anomalies
+- install and postinstall scripts
+- package provenance/signatures when available
+- lockfile churn
+- package age and maintenance signals when relevant
+- whether the package executes in CI, build or production
+- what secrets or filesystem access the package could have reached
 
-If authentication and privileged/high-impact actions exist, AgentSec evaluates whether MFA, passkeys or step-up authentication would materially reduce risk.
+For remediation, AgentSec prefers:
 
-It first checks whether an external identity provider may already provide the control. It should never claim "no MFA" based on source code alone when the IdP configuration is unavailable.
+1. upgrade the direct dependency introducing the vulnerable package
+2. move to the nearest compatible patched version
+3. use package-manager overrides only when necessary and tested
+4. rerun build/tests
+5. rerun the dependency audit
+6. rotate credentials and inspect affected systems if a package is confirmed malicious
 
-### Cloudflare-aware hardening
+See [`docs/SECURITY_CONCEPTS.md`](docs/SECURITY_CONCEPTS.md) and [`references/repository-security.md`](references/repository-security.md).
 
-When AgentSec detects Cloudflare/Wrangler, it considers:
+## `robots.txt`, `llms.txt`, and `security.txt`
 
-- Managed WAF rules
-- route-specific rate limits
-- login/signup/reset/API abuse protection
-- Turnstile for abuse-sensitive forms
-- bot protection where relevant
-- Full (strict) origin TLS
-- origin firewall restrictions and Authenticated Origin Pulls
-- caching only where responses are safe to share
-- explicit cache bypass for personalized or authorization-sensitive responses
+AgentSec keeps these concepts separate:
 
-Cloudflare is treated as defense in depth. It does not replace application authorization, parameterized queries or correct output encoding.
+- `robots.txt` is crawler policy, not access control.
+- `llms.txt` is optional public metadata for AI-oriented discovery, not access control.
+- `/.well-known/security.txt` can provide a clear vulnerability disclosure contact.
 
-### Directory enumeration resistance
-
-AgentSec assumes routes can be guessed or enumerated.
-
-If Gobuster/ffuf discovers a sensitive path, the remediation is to:
-
-1. remove sensitive artifacts from the public web root when possible
-2. disable directory indexing
-3. require authentication and server-side authorization for protected paths
-4. deny accidental dotfiles/backups/logs where appropriate
-5. fix deployment scripts that keep publishing sensitive files
-6. verify alternate routes/hosts do not expose the same resource
-
-Renaming `/admin` or hiding a path in `robots.txt` is not considered a security fix.
-
-## robots.txt, llms.txt and security.txt
-
-AgentSec understands the distinction:
-
-- **`robots.txt`** manages crawler behavior. It is not access control.
-- **`llms.txt`** is an optional emerging convention for presenting public site information to AI agents. It is not access control.
-- **`/.well-known/security.txt`** can provide a clear vulnerability-disclosure contact for public projects.
-
-AgentSec may recommend these as operational improvements, but it will not inflate a missing `robots.txt` or `llms.txt` into a vulnerability.
+A missing `robots.txt` or `llms.txt` may be an operational recommendation. It should not be presented as a vulnerability.
 
 ## Reports
 
-New AgentSec runs write to:
+Audit runs write to:
 
 ```text
 .agentsec/reports/<scope>-<timestamp>/
 ```
 
-Each run contains raw tool output plus `summary.json` and `summary.md` so both humans and agents can inspect exactly what was executed.
+Each run preserves raw tool output plus machine-readable and human-readable summaries so an agent can reason from evidence instead of silently discarding scanner details.
 
-Audit output is gitignored because it may contain sensitive information.
-
-## Finding types
-
-AgentSec distinguishes:
-
-- **Confirmed vulnerability**: evidence demonstrates an unsafe condition.
-- **Security design gap**: architecture shows a missing/weak control with concrete risk.
-- **Security opportunity**: defense-in-depth, resilience or operational hardening.
-- **Review needed**: repo evidence suggests a possible gap but external/runtime configuration must be checked.
-
-That distinction is intentional. Security tooling becomes much less useful when every recommendation is painted red.
-
-## Knowledge base
-
-The skill progressively loads references for the task at hand:
-
-- [`references/architecture-security.md`](references/architecture-security.md)
-- [`references/repository-security.md`](references/repository-security.md)
-- [`references/web-security.md`](references/web-security.md)
-- [`references/server-security.md`](references/server-security.md)
-- [`references/remediation.md`](references/remediation.md)
-
-This keeps the primary `SKILL.md` small enough for agent context while retaining deeper security guidance when needed.
-
-## Safety model
-
-AgentSec is designed for defensive development and authorized assessment.
-
-Remote enumeration requires explicit authorization in the CLI. More intrusive SQLi/XSS validation requires both:
+## Repository Layout
 
 ```text
---authorized --active
+AgentSec/
+├── SKILL.md
+├── README.md
+├── SECURITY.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── agentsec
+├── install-deps.sh
+├── assets/
+│   └── agentsec-banner.jpg
+├── docs/
+│   ├── GETTING_STARTED.md
+│   ├── INSTALLATION.md
+│   ├── USAGE.md
+│   ├── ARCHITECTURE.md
+│   ├── SECURITY_CONCEPTS.md
+│   └── REMEDIATION_GUIDE.md
+├── scripts/
+│   ├── agentsec.py
+│   ├── architecture_inventory.py
+│   └── local_server_audit.sh
+├── references/
+│   ├── architecture-security.md
+│   ├── repository-security.md
+│   ├── web-security.md
+│   ├── server-security.md
+│   └── remediation.md
+└── tests/
 ```
 
-The skill explicitly avoids credential attacks, persistence, destructive exploitation, data theft, denial-of-service tests and post-exploitation workflows.
+## Documentation
 
-## Project direction
+| Document | Purpose |
+| --- | --- |
+| [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) | Five-minute introduction and first audit |
+| [`docs/INSTALLATION.md`](docs/INSTALLATION.md) | Agent installation, scanner dependencies and troubleshooting |
+| [`docs/USAGE.md`](docs/USAGE.md) | Commands, modes, authorization flags and examples |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How AgentSec is structured and how agents consume it |
+| [`docs/SECURITY_CONCEPTS.md`](docs/SECURITY_CONCEPTS.md) | Threat modeling, least privilege, identity, supply chain, edge and server concepts |
+| [`docs/REMEDIATION_GUIDE.md`](docs/REMEDIATION_GUIDE.md) | How findings should be fixed and verified |
+| [`SECURITY.md`](SECURITY.md) | Responsible disclosure and project security policy |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development and contribution workflow |
 
-Planned areas for AgentSec include:
+The deeper task-specific knowledge used by the skill lives under [`references/`](references/).
 
-- richer framework-specific audit modules
-- cloud/IaC posture analysis
-- GitHub Actions security checks
-- SBOM generation and dependency provenance analysis
+## Agent Compatibility
+
+AgentSec follows the shared Agent Skills `SKILL.md` format. The open `skills` CLI supports installation into many coding agents from one source, including Claude Code, Codex, Cursor, GitHub Copilot and other compatible tools.
+
+The skill is intentionally vendor-neutral. `SKILL.md` is the brain; the CLI and references are the evidence and playbooks.
+
+## Design Principles
+
+- **Reason before scanning.** Understand architecture and scope first.
+- **Evidence before severity.** Scanner heuristics are not automatically confirmed vulnerabilities.
+- **Least privilege by default.** Reduce blast radius across users, services, databases, CI and cloud roles.
+- **Fix root causes.** Do not hide scanner results or rely on obscurity.
+- **Preserve behavior.** Security changes should be minimal, reviewable and tested.
+- **Verify fixes.** Rerun the relevant security check and normal project tests.
+- **Use defense in depth.** Edge, app, host and data-layer controls should reinforce each other.
+- **Respect scope.** Remote active testing requires explicit authorization.
+
+## Project Direction
+
+Planned development areas include:
+
+- framework-specific AppSec playbooks for Next.js, React, Express/Fastify, Prisma/Postgres, Supabase and common auth providers
+- richer Cloudflare, AWS and infrastructure-as-code review
+- GitHub Actions and CI privilege analysis
+- SBOM generation and provenance analysis
+- SARIF output for code-scanning platforms
 - security regression tests generated from confirmed findings
-- SARIF output for CI/code-scanning integrations
-- richer architecture diagrams and threat models
-- automated, reviewable remediation patches
+- architecture diagrams and threat models generated from repository evidence
+- reviewable remediation patches with verification results
+
+## Contributing
+
+Contributions are welcome, especially defensive checks, framework-specific hardening guidance, tests, false-positive reductions and documentation improvements.
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a PR.
 
 ## License
 
-MIT
+AgentSec is released under the [MIT License](LICENSE).
+
+<p align="center"><strong>Audit. Reason. Remediate. Verify.</strong></p>

@@ -135,6 +135,7 @@ Open the latest report locally with the private viewer:
 ```bash
 ./agentsec view
 ./agentsec view --no-browser
+./agentsec view --list
 ```
 
 The viewer binds to `127.0.0.1`, uses a random token in the URL, serves only the

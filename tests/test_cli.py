@@ -1,11 +1,13 @@
+import os
+import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.agentsec import architecture_observations, build_parser, url_parts
+from scripts.agentsec import architecture_observations, build_parser, save_summary, url_parts
 from scripts.finding_model import finding_from_check, finding_from_observation, write_findings
 from scripts.sarif import build_sarif
-from scripts.viewer import render_dashboard, select_run
+from scripts.viewer import list_runs, render_dashboard, select_run
 from scripts.web_baseline import analyze_responses
 
 
@@ -56,6 +58,51 @@ class CliTests(unittest.TestCase):
             self.assertEqual(len(findings), 1)
             self.assertTrue((Path(directory) / "findings.json").exists())
             self.assertTrue((Path(directory) / "findings.sarif").exists())
+
+    def test_report_history_lists_newest_runs(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory) / "reports"
+            old = root / "old"
+            new = root / "new"
+            old.mkdir(parents=True)
+            new.mkdir(parents=True)
+            os.utime(old, (1, 1))
+            os.utime(new, (2, 2))
+            self.assertEqual([path.name for path in list_runs(root)], ["new", "old"])
+
+    def test_view_list_flag_is_available(self):
+        args = build_parser().parse_args(["view", "--list"])
+        self.assertTrue(args.list_runs)
+
+    def test_summary_contains_finding_status_and_category_counts(self):
+        with TemporaryDirectory() as directory:
+            outdir = Path(directory) / "run"
+            outdir.mkdir()
+            save_summary(
+                outdir,
+                "test scope",
+                [{"name": "Semgrep", "returncode": 1, "output": "semgrep.txt"}],
+                [],
+                [{
+                    "title": "Missing CSP",
+                    "category": "headers",
+                    "status": "opportunity",
+                    "detail": "CSP was not observed",
+                    "recommendation": "Add a CSP",
+                }],
+            )
+            summary = json.loads((outdir / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["finding_status_counts"], {
+                "opportunity": 1,
+                "review-needed": 1,
+            })
+            self.assertEqual(summary["finding_category_counts"], {
+                "evidence-review": 1,
+                "headers": 1,
+            })
+            markdown = (outdir / "summary.md").read_text(encoding="utf-8")
+            self.assertIn("## Overview", markdown)
+            self.assertIn("**review-needed**: 1", markdown)
 
     def test_sarif_preserves_review_needed_status(self):
         document = build_sarif([

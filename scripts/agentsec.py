@@ -119,6 +119,13 @@ def architecture_observations(path: Path) -> list[dict]:
 def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str], observations: list[dict] | None = None, metadata: dict | None = None) -> None:
     observations = observations or []
     findings = write_findings(outdir, checks, observations)
+    status_counts: dict[str, int] = {}
+    category_counts: dict[str, int] = {}
+    for finding in findings:
+        status = str(finding.get("status", "unclassified"))
+        category = str(finding.get("category", "unclassified"))
+        status_counts[status] = status_counts.get(status, 0) + 1
+        category_counts[category] = category_counts.get(category, 0) + 1
     data = {
         "tool": "AgentSec",
         "version": VERSION,
@@ -126,6 +133,8 @@ def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str],
         "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "checks": checks,
         "finding_count": len(findings),
+        "finding_status_counts": status_counts,
+        "finding_category_counts": category_counts,
         "findings_file": "findings.json",
         "observations": observations,
         "notes": notes,
@@ -134,7 +143,12 @@ def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str],
         data.update(metadata)
     (outdir / "summary.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
 
-    lines = [f"# AgentSec audit: {scope}", "", "## Checks", ""]
+    lines = [f"# AgentSec audit: {scope}", "", "## Overview", ""]
+    if status_counts:
+        lines.extend(f"- **{status}**: {count}" for status, count in sorted(status_counts.items()))
+    else:
+        lines.append("- No findings or observations were recorded.")
+    lines.extend(["", "## Checks", ""])
     for check in checks:
         if check.get("skipped"):
             lines.append(f"- ⏭️ **{check['name']}**: {check['reason']}")
@@ -503,10 +517,18 @@ def audit_server(args: argparse.Namespace) -> int:
 
 def view_reports(args: argparse.Namespace) -> int:
     try:
-        from scripts.viewer import serve
+        from scripts.viewer import list_runs, serve
     except ModuleNotFoundError:  # direct ``python scripts/agentsec.py`` invocation
-        from viewer import serve
+        from viewer import list_runs, serve
 
+    if args.list_runs:
+        runs = list_runs(REPORT_ROOT)
+        if not runs:
+            print("No AgentSec report runs found.")
+            return 0
+        for run in runs:
+            print(run.name)
+        return 0
     return serve(REPORT_ROOT, args.run_name, port=args.port, open_browser=not args.no_browser)
 
 
@@ -535,6 +557,7 @@ def build_parser() -> argparse.ArgumentParser:
     view.add_argument("run_name", nargs="?", help="specific report directory; defaults to the latest run")
     view.add_argument("--port", type=int, default=0, help="local port; defaults to an available port")
     view.add_argument("--no-browser", action="store_true", help="print the tokened URL without opening a browser")
+    view.add_argument("--list", dest="list_runs", action="store_true", help="list saved report runs newest first")
     view.set_defaults(func=view_reports)
 
     repo = sub.add_parser("repo", help="audit source, dependencies, secrets, and deployment configuration")

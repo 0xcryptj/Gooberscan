@@ -73,7 +73,7 @@ dl {{ border-top:1px solid var(--line); padding-top:12px; margin-bottom:0 }} dt 
 @media(max-width:700px) {{ .grid {{ grid-template-columns:1fr }} main {{ padding-top:24px }} }}
 </style></head><body><main>
 <header><img src="/agentsec-logo.png" alt="AgentSec"><div><div class="eyebrow">Audit · Reason · Remediate · Verify</div><h1>AgentSec report</h1><p class="meta">{scope}<br>Created {created}</p></div></header>
-<section class="grid"><div class="stat"><strong>{len(findings)}</strong><span>Review items</span></div><div class="stat"><strong>{_text(summary.get("version", "unknown"))}</strong><span>AgentSec version</span></div><div class="stat"><strong>Local</strong><span>Report stays on this machine</span></div></section>
+<section class="grid"><div class="stat"><strong>{len(findings)}</strong><span>Findings and observations</span></div><div class="stat"><strong>{_text((summary.get("finding_status_counts") or {}).get("review-needed", 0))}</strong><span>Review needed</span></div><div class="stat"><strong>{_text((summary.get("finding_status_counts") or {}).get("opportunity", 0))}</strong><span>Opportunities</span></div><div class="stat"><strong>Local</strong><span>Report stays on this machine</span></div></section>
 <h2>Review queue</h2><section class="findings">{finding_markup}</section>
 <h2>Artifacts</h2><p class="meta"><code>summary.json</code> · <code>findings.json</code> · <code>findings.sarif</code> · preserved scanner output</p>
 </main></body></html>"""
@@ -82,8 +82,19 @@ dl {{ border-top:1px solid var(--line); padding-top:12px; margin-bottom:0 }} dt 
 def latest_run(report_root: Path) -> Path | None:
     if not report_root.is_dir():
         return None
-    runs = [path for path in report_root.iterdir() if path.is_dir()]
+    runs = list_runs(report_root)
     return max(runs, key=lambda path: path.stat().st_mtime) if runs else None
+
+
+def list_runs(report_root: Path) -> list[Path]:
+    """Return report runs newest first for the CLI history view."""
+    if not report_root.is_dir():
+        return []
+    return sorted(
+        (path for path in report_root.iterdir() if path.is_dir()),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
 
 
 def select_run(report_root: Path, run_name: str | None) -> Path:

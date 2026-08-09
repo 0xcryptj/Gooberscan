@@ -206,5 +206,12 @@ def run_baseline(url: str, outdir: Path, *, authorized: bool = False) -> tuple[d
     observations = analyze_responses(root, paths)
     payload = {"root": {key: value for key, value in root.items() if key != "body_sample"}, "paths": paths, "observations": observations}
     (outdir / "web-baseline.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    check = {"name": "web baseline analysis", "available": True, "returncode": 1 if any(item["status"] == "review-needed" for item in observations) else 0, "output": "web-baseline.json"}
+    check = {
+        "name": "web baseline analysis",
+        "available": True,
+        "returncode": 0,
+        "output": "web-baseline.json",
+        "observation_count": len(observations),
+        "review_needed_count": sum(item["status"] in {"review-needed", "needs-source-review"} for item in observations),
+    }
     return check, observations

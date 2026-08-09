@@ -118,7 +118,7 @@ def architecture_observations(path: Path) -> list[dict]:
 
 def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str], observations: list[dict] | None = None) -> None:
     observations = observations or []
-    findings = write_findings(outdir, checks)
+    findings = write_findings(outdir, checks, observations)
     data = {
         "tool": "AgentSec",
         "version": VERSION,

@@ -32,11 +32,12 @@ def _finding_card(finding: dict[str, Any]) -> str:
     severity = _text(finding.get("severity", "unclassified"))
     evidence = _text(finding.get("evidence", "No evidence path recorded"))
     reason = _text(finding.get("reason", "Review the preserved scanner output"))
+    recommendation = _text(finding.get("recommendation", "Correlate with source and runtime context."))
     return f"""
       <article class="finding">
         <div class="finding-top"><span class="pill">{status}</span><span>{severity}</span></div>
         <h3>{title}</h3>
-        <p>{reason}</p>
+        <p>{reason}</p><p><strong>Recommended:</strong> {recommendation}</p>
         <dl><dt>Confidence</dt><dd>{confidence}</dd><dt>Evidence</dt><dd><code>{evidence}</code></dd></dl>
       </article>
     """

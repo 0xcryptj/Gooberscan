@@ -15,6 +15,10 @@ def _rule_id(finding: dict[str, Any]) -> str:
     return str(finding.get("id") or "agentsec-review-needed")
 
 
+def _level(finding: dict[str, Any]) -> str:
+    return "warning" if finding.get("status") in {"review-needed", "needs-source-review"} else "note"
+
+
 def build_sarif(findings: list[dict[str, Any]], *, version: str = "development") -> dict[str, Any]:
     """Build a SARIF document without claiming unconfirmed findings are vulnerabilities."""
     rules: list[dict[str, Any]] = []
@@ -28,18 +32,19 @@ def build_sarif(findings: list[dict[str, Any]], *, version: str = "development")
                 "id": rule_id,
                 "name": str(finding.get("title", rule_id)),
                 "shortDescription": {"text": "Deterministic security evidence requires review"},
-                "defaultConfiguration": {"level": "warning"},
+                "defaultConfiguration": {"level": _level(finding)},
             })
             seen_rules.add(rule_id)
 
         result: dict[str, Any] = {
             "ruleId": rule_id,
-            "level": "warning",
-            "kind": "review",
+            "level": _level(finding),
+            "kind": "review" if _level(finding) == "warning" else "informational",
             "message": {
                 "text": (
                     f"{finding.get('title', 'Security evidence requires review')}: "
                     f"{finding.get('reason', 'correlate the evidence with source and runtime context')}. "
+                    f"Recommended action: {finding.get('recommendation', 'correlate with source and runtime context')}. "
                     "This is not a confirmed vulnerability."
                 ),
             },
@@ -50,6 +55,8 @@ def build_sarif(findings: list[dict[str, Any]], *, version: str = "development")
             },
         }
         evidence = finding.get("evidence")
+        if isinstance(evidence, list):
+            evidence = "summary.json"
         if evidence:
             result["locations"] = [{
                 "physicalLocation": {

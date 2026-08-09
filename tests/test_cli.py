@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from scripts.agentsec import architecture_observations, build_parser, url_parts
-from scripts.finding_model import finding_from_check, write_findings
+from scripts.finding_model import finding_from_check, finding_from_observation, write_findings
 from scripts.sarif import build_sarif
 from scripts.viewer import render_dashboard, select_run
 from scripts.web_baseline import analyze_responses
@@ -35,6 +35,18 @@ class CliTests(unittest.TestCase):
         self.assertIsNone(finding_from_check({"name": "clean", "returncode": 0}))
         self.assertIsNone(finding_from_check({"name": "missing", "skipped": True}))
 
+    def test_observation_becomes_an_individual_finding(self):
+        finding = finding_from_observation({
+            "title": "Missing CSP",
+            "category": "headers",
+            "status": "review-needed",
+            "detail": "CSP was not observed",
+            "recommendation": "Add a CSP",
+        }, 1)
+        self.assertEqual(finding["title"], "Missing CSP")
+        self.assertEqual(finding["category"], "headers")
+        self.assertEqual(finding["recommendation"], "Add a CSP")
+
     def test_findings_index_is_written(self):
         with TemporaryDirectory() as directory:
             findings = write_findings(
@@ -63,6 +75,18 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result["kind"], "review")
         self.assertIn("not a confirmed vulnerability", result["message"]["text"])
         self.assertEqual(result["properties"]["agentsec.status"], "review-needed")
+
+    def test_sarif_uses_note_for_non_actionable_observation(self):
+        document = build_sarif([{
+            "id": "observation-robots-1",
+            "title": "robots.txt not observed",
+            "status": "opportunity",
+            "reason": "No crawler policy was found",
+            "recommendation": "Add one if useful",
+        }])
+        result = document["runs"][0]["results"][0]
+        self.assertEqual(result["level"], "note")
+        self.assertEqual(result["kind"], "informational")
 
     def test_viewer_escapes_report_content_and_selects_latest_run(self):
         with TemporaryDirectory() as directory:

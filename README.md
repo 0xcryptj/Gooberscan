@@ -110,6 +110,7 @@ Use AgentSec to implement the safe high-priority fixes and retest them.
 
 ```bash
 ./agentsec repo .
+./agentsec repo . --scan-mode deep
 ./agentsec server --local
 ./agentsec web https://staging.example.com --authorized
 ./agentsec web https://staging.example.com --authorized --baseline-only

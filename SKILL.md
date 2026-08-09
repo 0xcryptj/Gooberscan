@@ -160,6 +160,20 @@ The normal entry point is:
 ./agentsec repo .
 ```
 
+Repository profiles:
+
+```bash
+./agentsec repo . --scan-mode quick
+./agentsec repo . --scan-mode standard
+./agentsec repo . --scan-mode deep
+```
+
+`quick` collects architecture, sensitive-artifact, and package-manager evidence
+while skipping optional heavy scanners. `standard` is the normal balanced audit.
+`deep` runs the available optional scanners and includes filesystem license
+analysis when Trivy is installed. Every report records the selected profile and
+which checks were skipped.
+
 The wrapper should automatically generate architecture evidence and refresh security intelligence before deterministic repository checks.
 
 Inspect at minimum:

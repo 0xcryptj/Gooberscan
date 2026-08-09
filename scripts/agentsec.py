@@ -116,7 +116,7 @@ def architecture_observations(path: Path) -> list[dict]:
     return observations
 
 
-def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str], observations: list[dict] | None = None) -> None:
+def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str], observations: list[dict] | None = None, metadata: dict | None = None) -> None:
     observations = observations or []
     findings = write_findings(outdir, checks, observations)
     data = {
@@ -130,6 +130,8 @@ def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str],
         "observations": observations,
         "notes": notes,
     }
+    if metadata:
+        data.update(metadata)
     (outdir / "summary.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     lines = [f"# AgentSec audit: {scope}", "", "## Checks", ""]
@@ -219,6 +221,7 @@ def audit_repo(args: argparse.Namespace) -> int:
     outdir = create_run(f"repo-{path.name}")
     checks: list[dict] = []
     notes: list[str] = []
+    notes.append(f"Scan profile: {args.scan_mode}.")
 
     # Keep direct Python invocations equivalent to the wrapper: architecture
     # evidence must describe the target repository, not AgentSec itself.
@@ -257,16 +260,24 @@ def audit_repo(args: argparse.Namespace) -> int:
     elif package_json.exists():
         checks.append(skipped("npm audit", "package.json found but npm is not installed"))
 
+    quick = args.scan_mode == "quick"
+    deep = args.scan_mode == "deep"
+
     # Cross-ecosystem scanners are optional. AgentSec consumes whichever are available.
-    if command_exists("osv-scanner"):
+    if quick:
+        checks.append(skipped("OSV-Scanner", "quick profile skips optional cross-ecosystem scanners"))
+    elif command_exists("osv-scanner"):
         checks.append(run_cmd("osv-scanner", ["osv-scanner", "scan", "--recursive", str(path)], outdir, cwd=path))
     else:
         checks.append(skipped("OSV-Scanner", "optional tool not installed"))
 
-    if command_exists("trivy"):
+    if quick:
+        checks.append(skipped("Trivy filesystem scan", "quick profile skips filesystem SAST/SCA scanning"))
+    elif command_exists("trivy"):
+        trivy_scanners = "vuln,misconfig,secret,license" if deep else "vuln,misconfig,secret"
         checks.append(run_cmd(
             "trivy-filesystem",
-            ["trivy", "fs", "--scanners", "vuln,misconfig,secret", "--format", "json", str(path)],
+            ["trivy", "fs", "--scanners", trivy_scanners, "--format", "json", str(path)],
             outdir,
             cwd=path,
             timeout=1200,
@@ -274,7 +285,9 @@ def audit_repo(args: argparse.Namespace) -> int:
     else:
         checks.append(skipped("Trivy filesystem scan", "optional tool not installed"))
 
-    if command_exists("semgrep"):
+    if quick:
+        checks.append(skipped("Semgrep", "quick profile skips optional SAST scanning"))
+    elif command_exists("semgrep"):
         checks.append(run_cmd(
             "semgrep-auto",
             ["semgrep", "scan", "--config", "auto", "--json", str(path)],
@@ -285,7 +298,9 @@ def audit_repo(args: argparse.Namespace) -> int:
     else:
         checks.append(skipped("Semgrep", "optional tool not installed"))
 
-    if command_exists("gitleaks"):
+    if quick:
+        checks.append(skipped("Gitleaks", "quick profile skips optional secret scanning"))
+    elif command_exists("gitleaks"):
         checks.append(run_cmd(
             "gitleaks",
             ["gitleaks", "detect", "--source", str(path), "--no-banner", "--report-format", "json"],
@@ -296,7 +311,9 @@ def audit_repo(args: argparse.Namespace) -> int:
     else:
         checks.append(skipped("Gitleaks", "optional tool not installed"))
 
-    if (path / "requirements.txt").exists() or (path / "pyproject.toml").exists():
+    if quick and ((path / "requirements.txt").exists() or (path / "pyproject.toml").exists()):
+        checks.append(skipped("pip-audit", "quick profile skips optional Python dependency scanning"))
+    elif (path / "requirements.txt").exists() or (path / "pyproject.toml").exists():
         if command_exists("pip-audit"):
             cmd = ["pip-audit", "--format", "json"]
             if (path / "requirements.txt").exists():
@@ -305,13 +322,15 @@ def audit_repo(args: argparse.Namespace) -> int:
         else:
             checks.append(skipped("pip-audit", "Python project detected but pip-audit is not installed"))
 
-    if (path / "Cargo.lock").exists():
+    if quick and (path / "Cargo.lock").exists():
+        checks.append(skipped("cargo-audit", "quick profile skips optional Rust dependency scanning"))
+    elif (path / "Cargo.lock").exists():
         if command_exists("cargo-audit"):
             checks.append(run_cmd("cargo-audit", ["cargo-audit", "audit", "--json"], outdir, cwd=path))
         else:
             checks.append(skipped("cargo-audit", "Rust project detected but cargo-audit is not installed"))
 
-    save_summary(outdir, f"repository {path}", checks, notes, observations)
+    save_summary(outdir, f"repository {path}", checks, notes, observations, {"scan_mode": args.scan_mode})
     print(f"AgentSec repository audit complete: {outdir}")
     print(f"Review: {outdir / 'summary.md'}")
     return 0
@@ -521,6 +540,7 @@ def build_parser() -> argparse.ArgumentParser:
     repo = sub.add_parser("repo", help="audit source, dependencies, secrets, and deployment configuration")
     repo.add_argument("path", nargs="?", default=".")
     repo.add_argument("--fix", action="store_true", help="apply conservative package-manager remediation where supported")
+    repo.add_argument("--scan-mode", choices=("quick", "standard", "deep"), default="standard", help="quick skips optional heavy scanners; deep adds license scanning")
     repo.set_defaults(func=audit_repo)
 
     web = sub.add_parser("web", aliases=["url"], help="audit a web application or URL")

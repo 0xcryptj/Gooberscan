@@ -152,6 +152,11 @@ class CliTests(unittest.TestCase):
             self.assertEqual(observations[0]["status"], "review-needed")
             self.assertEqual(observations[0]["title"], "Review database roles")
 
+    def test_repository_scan_profiles_are_available(self):
+        for mode in ("quick", "standard", "deep"):
+            args = build_parser().parse_args(["repo", ".", "--scan-mode", mode])
+            self.assertEqual(args.scan_mode, mode)
+
     def test_web_baseline_ignores_spa_soft_404s(self):
         from scripts.web_baseline import PATHS
 

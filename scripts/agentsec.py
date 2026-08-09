@@ -20,6 +20,11 @@ import sys
 import textwrap
 from urllib.parse import urlparse
 
+try:
+    from scripts.finding_model import write_findings
+except ModuleNotFoundError:  # direct ``python scripts/agentsec.py`` invocation
+    from finding_model import write_findings
+
 ROOT = Path(__file__).resolve().parent.parent
 REPORT_ROOT = ROOT / ".agentsec" / "reports"
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").exists() else "development"
@@ -89,12 +94,15 @@ def skipped(name: str, reason: str) -> dict:
 
 
 def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str]) -> None:
+    findings = write_findings(outdir, checks)
     data = {
         "tool": "AgentSec",
         "version": VERSION,
         "scope": scope,
         "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "checks": checks,
+        "finding_count": len(findings),
+        "findings_file": "findings.json",
         "notes": notes,
     }
     (outdir / "summary.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -109,6 +117,14 @@ def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str])
             rc = check.get("returncode")
             suffix = " (timed out)" if check.get("timed_out") else ""
             lines.append(f"- **{check['name']}**: exit {rc}{suffix} → `{check.get('output', '')}`")
+    lines.extend(["", "## Review queue", ""])
+    if findings:
+        lines.extend(
+            f"- **{finding['title']}** — `{finding['status']}`; evidence: `{finding['evidence']}`"
+            for finding in findings
+        )
+    else:
+        lines.append("- No deterministic checks currently require follow-up.")
     if notes:
         lines.extend(["", "## Notes", ""] + [f"- {note}" for note in notes])
     lines.extend([
@@ -419,6 +435,15 @@ def audit_server(args: argparse.Namespace) -> int:
     return 0
 
 
+def view_reports(args: argparse.Namespace) -> int:
+    try:
+        from scripts.viewer import serve
+    except ModuleNotFoundError:  # direct ``python scripts/agentsec.py`` invocation
+        from viewer import serve
+
+    return serve(REPORT_ROOT, args.run_name, port=args.port, open_browser=not args.no_browser)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentsec",
@@ -439,6 +464,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    view = sub.add_parser("view", help="open a private local viewer for an audit report")
+    view.add_argument("run_name", nargs="?", help="specific report directory; defaults to the latest run")
+    view.add_argument("--port", type=int, default=0, help="local port; defaults to an available port")
+    view.add_argument("--no-browser", action="store_true", help="print the tokened URL without opening a browser")
+    view.set_defaults(func=view_reports)
 
     repo = sub.add_parser("repo", help="audit source, dependencies, secrets, and deployment configuration")
     repo.add_argument("path", nargs="?", default=".")

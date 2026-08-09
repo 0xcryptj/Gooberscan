@@ -35,6 +35,12 @@ Use AgentSec to audit this project and propose the simplest safe fixes.
 ```
 
 <p align="center">
+  <a href="https://github.com/0xcryptj/AgentSec">
+    <img src="assets/agentsec-logo.png" alt="AgentSec logo" width="132" />
+  </a>
+</p>
+
+<p align="center">
   <img src="assets/agentsec-hero.jpg" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
 </p>
 
@@ -110,6 +116,27 @@ Use AgentSec to implement the safe high-priority fixes and retest them.
 ./agentsec --version
 ./agentsec update
 ```
+
+Each audit preserves raw tool output and writes a machine-readable
+`findings.json` review queue alongside `summary.json` and `summary.md` under
+`.agentsec/reports/<run>/`. A non-zero scanner result remains explicitly
+`review-needed` until the agent or a human correlates it with source and
+runtime architecture. The same run also emits `findings.sarif` for GitHub Code
+Scanning and other SARIF-compatible systems.
+
+The included [security report workflow](.github/workflows/agentsec-security-report.yml)
+publishes the report as a pull-request artifact and uploads SARIF to GitHub Code
+Scanning when repository permissions allow it.
+
+Open the latest report locally with the private viewer:
+
+```bash
+./agentsec view
+./agentsec view --no-browser
+```
+
+The viewer binds to `127.0.0.1`, uses a random token in the URL, serves only the
+selected report run, and shuts down with `Ctrl-C`.
 
 Website audit prompt:
 

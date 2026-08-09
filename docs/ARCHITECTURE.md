@@ -19,14 +19,18 @@ reasoning/playbooks     deterministic tools
       +---------+----------+
                 |
                 v
-        evidence + findings
+evidence + findings
                 |
                 v
           remediation
                 |
                 v
-             retest
+retest
 ```
+
+Every audit run also produces a normalized `findings.json` review queue. This
+queue contains evidence that needs agent or human correlation; it deliberately
+does not turn scanner exit codes into confirmed vulnerabilities.
 
 ## Layer 1: `SKILL.md`
 
@@ -127,12 +131,21 @@ Repository
    v
 .agentsec/reports/<run>/
    |
+   +--> summary.json / summary.md
+   +--> findings.json (unconfirmed review queue)
+   +--> findings.sarif
+   +--> raw scanner output
+   |
    v
 AI agent correlates evidence with source/config
    |
    v
 prioritized findings + fixes + verification
 ```
+
+`agentsec view` renders one run locally without a frontend build step. The
+viewer binds to loopback, requires a random URL token, rejects path traversal,
+escapes report content, and serves no external resources.
 
 ## Web audit data flow
 

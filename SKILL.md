@@ -298,6 +298,29 @@ Baseline authorized assessment:
 ./agentsec web https://example.com --authorized
 ```
 
+For a bounded report that must complete before optional long-running scanners,
+use:
+
+```bash
+./agentsec web https://example.com --authorized --baseline-only
+```
+
+When a user asks for vulnerabilities or misconfigurations, do not stop at a
+clean scanner exit code. Read the complete report and state coverage explicitly:
+
+- response headers, TLS/redirect behavior, CORS, cookies and cache controls
+- robots.txt, sitemap.xml and security.txt opportunities
+- common exposed files, backup/configuration paths and API specifications
+- soft-404 behavior so SPA fallbacks are not reported as exposed directories
+- authentication, authorization, tenant boundaries, database roles/policies,
+  storage, webhooks, queues, CI/CD, cloud/edge controls and secrets when source
+  or provider configuration is available
+- which optional scanners ran, which were skipped, and what remains untested
+
+Separate confirmed vulnerabilities, design gaps, hardening opportunities,
+not-observed checks, and source/provider review items. Never summarize “no
+findings” without also naming the tested surface and its limitations.
+
 Equivalent URL alias:
 
 ```bash

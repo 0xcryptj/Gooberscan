@@ -93,6 +93,29 @@ def skipped(name: str, reason: str) -> dict:
     return {"name": name, "skipped": True, "reason": reason}
 
 
+def architecture_observations(path: Path) -> list[dict]:
+    """Convert architecture inventory opportunities into report observations."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    observations = []
+    for item in data.get("opportunities", []):
+        if not isinstance(item, dict) or not item.get("title"):
+            continue
+        security_control = bool(item.get("security_control", True))
+        observations.append({
+            "title": item["title"],
+            "category": item.get("category", "architecture"),
+            "status": "review-needed" if security_control else "opportunity",
+            "security_control": security_control,
+            "detail": item.get("why", "Architecture evidence suggests a follow-up review."),
+            "recommendation": item.get("recommended_action", "Inspect the relevant source and runtime configuration."),
+            "evidence": item.get("evidence", []),
+        })
+    return observations
+
+
 def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str], observations: list[dict] | None = None) -> None:
     observations = observations or []
     findings = write_findings(outdir, checks)
@@ -206,6 +229,7 @@ def audit_repo(args: argparse.Namespace) -> int:
         outdir,
         cwd=path,
     ))
+    observations = architecture_observations(architecture_output)
 
     checks.append(find_sensitive_artifacts(path, outdir))
 
@@ -287,7 +311,7 @@ def audit_repo(args: argparse.Namespace) -> int:
         else:
             checks.append(skipped("cargo-audit", "Rust project detected but cargo-audit is not installed"))
 
-    save_summary(outdir, f"repository {path}", checks, notes)
+    save_summary(outdir, f"repository {path}", checks, notes, observations)
     print(f"AgentSec repository audit complete: {outdir}")
     print(f"Review: {outdir / 'summary.md'}")
     return 0

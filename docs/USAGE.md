@@ -186,6 +186,11 @@ When an agent implements the remediation, it should also report changed files an
 
 ```text
 Use AgentSec to audit this repo. Start by mapping architecture and trust boundaries. Give me confirmed vulnerabilities first, then design gaps and opportunities.
+
+For a complete audit response, always report the tested coverage and limitations:
+which dependency, secret, SAST, web, architecture, authentication,
+authorization, database, storage, CI/CD, cloud/edge, and exposed-path checks
+actually ran. A clean exit code is not proof that untested controls are safe.
 ```
 
 ```text

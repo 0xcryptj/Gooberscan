@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.agentsec import build_parser, url_parts
+from scripts.agentsec import architecture_observations, build_parser, url_parts
 from scripts.finding_model import finding_from_check, write_findings
 from scripts.sarif import build_sarif
 from scripts.viewer import render_dashboard, select_run
@@ -113,6 +113,20 @@ class CliTests(unittest.TestCase):
         args = build_parser().parse_args(["web", "https://example.com", "--authorized", "--baseline-only"])
         self.assertTrue(args.authorized)
         self.assertTrue(args.baseline_only)
+
+    def test_architecture_opportunities_are_report_observations(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "architecture.json"
+            path.write_text(
+                '{"opportunities":[{"title":"Review database roles",'
+                '"category":"database","security_control":true,'
+                '"why":"Database evidence exists",'
+                '"recommended_action":"Inspect runtime roles"}]}',
+                encoding="utf-8",
+            )
+            observations = architecture_observations(path)
+            self.assertEqual(observations[0]["status"], "review-needed")
+            self.assertEqual(observations[0]["title"], "Review database roles")
 
     def test_web_baseline_ignores_spa_soft_404s(self):
         from scripts.web_baseline import PATHS

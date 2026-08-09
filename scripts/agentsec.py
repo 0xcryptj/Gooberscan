@@ -93,7 +93,8 @@ def skipped(name: str, reason: str) -> dict:
     return {"name": name, "skipped": True, "reason": reason}
 
 
-def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str]) -> None:
+def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str], observations: list[dict] | None = None) -> None:
+    observations = observations or []
     findings = write_findings(outdir, checks)
     data = {
         "tool": "AgentSec",
@@ -103,6 +104,7 @@ def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str])
         "checks": checks,
         "finding_count": len(findings),
         "findings_file": "findings.json",
+        "observations": observations,
         "notes": notes,
     }
     (outdir / "summary.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -125,6 +127,13 @@ def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str])
         )
     else:
         lines.append("- No deterministic checks currently require follow-up.")
+    lines.extend(["", "## Baseline observations", ""])
+    if observations:
+        for item in observations:
+            marker = "security control" if item.get("security_control", True) else "product/discovery opportunity"
+            lines.append(f"- **{item['title']}** — `{item['status']}` ({marker}): {item['detail']} Recommended action: {item['recommendation']}")
+    else:
+        lines.append("- No structured baseline observations were collected.")
     if notes:
         lines.extend(["", "## Notes", ""] + [f"- {note}" for note in notes])
     lines.extend([
@@ -304,6 +313,20 @@ def audit_web(args: argparse.Namespace) -> int:
     outdir = create_run(f"web-{host}")
     checks: list[dict] = []
     notes: list[str] = []
+    observations: list[dict] = []
+
+    try:
+        from scripts.web_baseline import run_baseline
+    except ModuleNotFoundError:  # direct ``python scripts/agentsec.py`` invocation
+        from web_baseline import run_baseline
+    baseline_check, observations = run_baseline(url, outdir, authorized=args.authorized)
+    checks.append(baseline_check)
+
+    if args.baseline_only:
+        notes.append("Baseline-only mode selected; optional network surface scanners were not run.")
+        save_summary(outdir, f"web {url}", checks, notes, observations)
+        print(f"AgentSec web baseline complete: {outdir}")
+        return 0
 
     if command_exists("curl"):
         checks.append(run_cmd("http-response-headers", ["curl", "-sSIL", "--max-time", "20", url], outdir, timeout=30))
@@ -314,7 +337,7 @@ def audit_web(args: argparse.Namespace) -> int:
     if not args.authorized:
         notes.append("Remote enumeration/scanning skipped because --authorized was not supplied.")
         notes.append("Use --authorized only for a system you own or are explicitly permitted to assess.")
-        save_summary(outdir, f"web {url}", checks, notes)
+        save_summary(outdir, f"web {url}", checks, notes, observations)
         print(f"AgentSec baseline inspection complete: {outdir}")
         return 0
 
@@ -389,7 +412,7 @@ def audit_web(args: argparse.Namespace) -> int:
         else:
             checks.append(skipped("ZAP active scan", "Docker is not installed"))
 
-    save_summary(outdir, f"web {url}", checks, notes)
+    save_summary(outdir, f"web {url}", checks, notes, observations)
     print(f"AgentSec web audit complete: {outdir}")
     print(f"Review: {outdir / 'summary.md'}")
     return 0
@@ -480,6 +503,7 @@ def build_parser() -> argparse.ArgumentParser:
     web.add_argument("url")
     web.add_argument("--authorized", action="store_true", help="confirm you own or have permission to assess the target")
     web.add_argument("--active", action="store_true", help="run controlled active SQLi/XSS validation; requires --authorized")
+    web.add_argument("--baseline-only", action="store_true", help="run bounded web checks and skip long optional surface scanners")
     web.set_defaults(func=audit_web)
 
     server = sub.add_parser("server", help="audit local hardening or an authorized server's external attack surface")

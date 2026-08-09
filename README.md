@@ -112,6 +112,7 @@ Use AgentSec to implement the safe high-priority fixes and retest them.
 ./agentsec repo .
 ./agentsec server --local
 ./agentsec web https://staging.example.com --authorized
+./agentsec web https://staging.example.com --authorized --baseline-only
 ./agentsec url https://staging.example.com --authorized
 ./agentsec --version
 ./agentsec update
@@ -145,6 +146,12 @@ This is my website: https://example.com. Take a look at misconfigurations and pe
 ```
 
 The agent should run a safe authorized baseline first, correlate results with the application source when available, separate patchable code issues from server/provider configuration, and ask before changing anything. Active validation remains opt-in with `--active`.
+
+Web reports include structured observations for browser headers, CORS, cookies,
+robots.txt, sitemap.xml, security.txt, common sensitive paths, technology/API
+signals, and database items that cannot be verified from black-box traffic.
+`--baseline-only` completes these bounded checks without waiting for optional
+long-running surface scanners.
 
 Active remote testing is explicit:
 

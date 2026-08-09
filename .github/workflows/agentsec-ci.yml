@@ -27,6 +27,7 @@ jobs:
             scripts/finding_model.py \
             scripts/sarif.py \
             scripts/viewer.py \
+            scripts/web_baseline.py \
             scripts/architecture_inventory.py \
             scripts/security_intel.py
 

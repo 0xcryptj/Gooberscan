@@ -22,8 +22,12 @@ from urllib.parse import urlparse
 
 try:
     from scripts.finding_model import write_findings
+    from scripts.agent_graph import AgentGraph, AgentTask
+    from scripts.scan_session import ScanSession
 except ModuleNotFoundError:  # direct ``python scripts/agentsec.py`` invocation
     from finding_model import write_findings
+    from agent_graph import AgentGraph, AgentTask
+    from scan_session import ScanSession
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORT_ROOT = ROOT / ".agentsec" / "reports"
@@ -186,10 +190,55 @@ def save_summary(outdir: Path, scope: str, checks: list[dict], notes: list[str],
     (outdir / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def read_instruction(args: argparse.Namespace, notes: list[str]) -> str:
+    instruction = str(getattr(args, "instruction", "") or "").strip()
+    instruction_file = getattr(args, "instruction_file", None)
+    if instruction_file:
+        try:
+            instruction = (instruction + "\n\n" + Path(instruction_file).read_text(encoding="utf-8")).strip()
+        except (OSError, UnicodeError) as exc:
+            notes.append(f"Instruction file could not be read: {exc}")
+    if instruction:
+        notes.append("Custom instructions were recorded for agent-led correlation.")
+    return instruction
+
+
+def changed_files(path: Path, diff_base: str | None) -> list[str]:
+    if not diff_base or not (path / ".git").exists() or not command_exists("git"):
+        return []
+    try:
+        proc = subprocess.run(["git", "diff", "--name-only", f"{diff_base}...HEAD"], cwd=path, text=True, capture_output=True, timeout=30, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
+def should_fail(findings: list[dict], threshold: str) -> bool:
+    order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4, "unclassified": 5}
+    minimum = order.get(threshold, 1)
+    return any(finding.get("status") in {"confirmed", "evidence-backed"} and order.get(str(finding.get("severity")), 5) <= minimum for finding in findings)
+
+
 def create_run(scope: str) -> Path:
     outdir = REPORT_ROOT / f"{slug(scope)}-{now_stamp()}"
     outdir.mkdir(parents=True, exist_ok=False)
+    ScanSession.start(outdir, scope)
     return outdir
+
+
+def run_specialist_graph(outdir: Path, checks: list[dict], observations: list[dict]) -> dict[str, dict]:
+    """Coordinate deterministic specialists over preserved evidence."""
+    session = ScanSession(outdir)
+    task_data = {
+        "architecture": {"observations": len(observations)},
+        "dependency": {"checks": sum("audit" in str(item.get("name", "")).lower() or "osv" in str(item.get("name", "")).lower() for item in checks)},
+        "misconfiguration": {"checks": sum("trivy" in str(item.get("name", "")).lower() or "baseline" in str(item.get("name", "")).lower() for item in checks)},
+        "secrets": {"checks": sum("secret" in str(item.get("name", "")).lower() or "gitleaks" in str(item.get("name", "")).lower() for item in checks)},
+        "reporting": {"preserved_checks": len(checks)},
+    }
+    graph = AgentGraph(session)
+    tasks = [AgentTask(name, f"Specialist review of {name} evidence", lambda value=value: {"ok": True, **value}) for name, value in task_data.items()]
+    return graph.run(tasks)
 
 
 def find_sensitive_artifacts(path: Path, outdir: Path) -> dict:
@@ -236,6 +285,10 @@ def audit_repo(args: argparse.Namespace) -> int:
     checks: list[dict] = []
     notes: list[str] = []
     notes.append(f"Scan profile: {args.scan_mode}.")
+    instruction = read_instruction(args, notes)
+    if getattr(args, "scope_mode", "auto") == "diff":
+        files = changed_files(path, getattr(args, "diff_base", None))
+        notes.append(f"Diff scope selected; {len(files)} changed file(s) were discovered." if files else "Diff scope selected, but changed files could not be resolved; full deterministic checks were retained.")
 
     # Keep direct Python invocations equivalent to the wrapper: architecture
     # evidence must describe the target repository, not AgentSec itself.
@@ -249,6 +302,18 @@ def audit_repo(args: argparse.Namespace) -> int:
     observations = architecture_observations(architecture_output)
 
     checks.append(find_sensitive_artifacts(path, outdir))
+
+    source_output = outdir / "source-security.json"
+    source_check = run_cmd(
+        "source-security-patterns",
+        [sys.executable, str(ROOT / "scripts" / "source_security.py"), str(path), "--output", str(source_output)]
+        + (["--include-tests"] if getattr(args, "include_tests", False) else []),
+        outdir,
+        cwd=path,
+        timeout=600,
+    )
+    source_check["output"] = str(source_output)
+    checks.append(source_check)
 
     package_json = path / "package.json"
     if package_json.exists() and command_exists("npm"):
@@ -344,10 +409,16 @@ def audit_repo(args: argparse.Namespace) -> int:
         else:
             checks.append(skipped("cargo-audit", "Rust project detected but cargo-audit is not installed"))
 
-    save_summary(outdir, f"repository {path}", checks, notes, observations, {"scan_mode": args.scan_mode})
+    specialists = run_specialist_graph(outdir, checks, observations)
+    save_summary(outdir, f"repository {path}", checks, notes, observations, {"scan_mode": args.scan_mode, "scope_mode": getattr(args, "scope_mode", "auto"), "diff_base": getattr(args, "diff_base", None), "instruction": instruction, "specialists": specialists})
+    ScanSession(outdir).finish()
     print(f"AgentSec repository audit complete: {outdir}")
     print(f"Review: {outdir / 'summary.md'}")
-    return 0
+    try:
+        findings = json.loads((outdir / "findings.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        findings = []
+    return 2 if should_fail(findings, getattr(args, "fail_on", "high")) else 0
 
 
 def url_parts(raw: str) -> tuple[str, str]:
@@ -365,6 +436,9 @@ def audit_web(args: argparse.Namespace) -> int:
         return 2
     if args.active and not args.authorized:
         print("AgentSec: --active requires --authorized. Active vulnerability validation was not run.", file=sys.stderr)
+        return 2
+    if getattr(args, "browser", False) and not args.active:
+        print("AgentSec: --browser requires --active --authorized.", file=sys.stderr)
         return 2
 
     outdir = create_run(f"web-{host}")
@@ -469,10 +543,56 @@ def audit_web(args: argparse.Namespace) -> int:
         else:
             checks.append(skipped("ZAP active scan", "Docker is not installed"))
 
+        if getattr(args, "browser", False):
+            try:
+                from scripts.browser_probe import command as browser_command
+            except ModuleNotFoundError:
+                from browser_probe import command as browser_command
+            browser = browser_command()
+            if browser:
+                checks.append(run_cmd("browser-open", [browser, "open", url], outdir, timeout=120))
+                checks.append(run_cmd("browser-snapshot", [browser, "snapshot"], outdir, timeout=120))
+            else:
+                checks.append(skipped("browser baseline", "Playwright CLI is not installed"))
+
     save_summary(outdir, f"web {url}", checks, notes, observations)
     print(f"AgentSec web audit complete: {outdir}")
     print(f"Review: {outdir / 'summary.md'}")
     return 0
+
+
+def audit_api(args: argparse.Namespace) -> int:
+    spec_path = Path(args.spec).expanduser().resolve()
+    if not spec_path.is_file():
+        print(f"AgentSec: API specification does not exist: {spec_path}", file=sys.stderr)
+        return 2
+    if args.base_url and not args.authorized:
+        print("AgentSec: API probing requires --authorized.", file=sys.stderr)
+        return 2
+    outdir = create_run(f"api-{spec_path.stem}")
+    checks: list[dict] = []
+    notes: list[str] = ["API contract inventory is passive; state-changing and templated endpoints are not probed."]
+    observations: list[dict] = []
+    try:
+        from scripts.api_probe import inventory, load_spec, probe
+    except ModuleNotFoundError:
+        from api_probe import inventory, load_spec, probe
+    try:
+        spec = load_spec(spec_path)
+        endpoints = inventory(spec)
+        (outdir / "api-inventory.json").write_text(json.dumps({"spec": str(spec_path), "endpoints": endpoints}, indent=2), encoding="utf-8")
+        checks.append({"name": "OpenAPI inventory", "available": True, "returncode": 0, "output": "api-inventory.json", "endpoint_count": len(endpoints)})
+        if args.base_url:
+            results, observations = probe(spec, args.base_url)
+            (outdir / "api-probe.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
+            checks.append({"name": "authorized API probe", "available": True, "returncode": 0, "output": "api-probe.json", "probed_count": len(results)})
+    except ValueError as exc:
+        checks.append({"name": "OpenAPI inventory", "available": True, "returncode": 1, "output": "api-inventory.json", "error": str(exc)})
+    run_specialist_graph(outdir, checks, observations)
+    save_summary(outdir, f"API specification {spec_path}", checks, notes, observations, {"base_url": args.base_url, "authorized": args.authorized})
+    ScanSession(outdir).finish()
+    print(f"AgentSec API audit complete: {outdir}")
+    return 0 if not any(item.get("returncode") not in (0, None) for item in checks) else 1
 
 
 def audit_server(args: argparse.Namespace) -> int:
@@ -513,6 +633,35 @@ def audit_server(args: argparse.Namespace) -> int:
     save_summary(outdir, f"server {target}", checks, notes)
     print(f"AgentSec server audit complete: {outdir}")
     return 0
+
+
+def audit_scan(args: argparse.Namespace) -> int:
+    """Run the bounded audit appropriate to each Strix-style target."""
+    targets = list(args.target or [])
+    for target_file in args.target_list or []:
+        try:
+            targets.extend(line.strip() for line in Path(target_file).read_text(encoding="utf-8").splitlines() if line.strip() and not line.lstrip().startswith("#"))
+        except (OSError, UnicodeError) as exc:
+            print(f"AgentSec: could not read target list {target_file}: {exc}", file=sys.stderr)
+            return 2
+    if not targets:
+        print("AgentSec: scan requires --target or --target-list", file=sys.stderr)
+        return 2
+    exit_code = 0
+    for target in targets:
+        parsed = urlparse(target)
+        if parsed.scheme in {"http", "https"}:
+            child = argparse.Namespace(url=target, authorized=args.authorized, active=args.active, baseline_only=args.baseline_only, browser=False)
+            exit_code = max(exit_code, audit_web(child))
+        else:
+            path = Path(target).expanduser().resolve()
+            if not path.is_dir():
+                print(f"AgentSec: unsupported or missing local target: {target}", file=sys.stderr)
+                exit_code = max(exit_code, 2)
+                continue
+            child = argparse.Namespace(path=str(path), scan_mode=args.scan_mode, fix=False, instruction=args.instruction, instruction_file=args.instruction_file, scope_mode=args.scope_mode, diff_base=args.diff_base, fail_on=args.fail_on)
+            exit_code = max(exit_code, audit_repo(child))
+    return exit_code
 
 
 def view_reports(args: argparse.Namespace) -> int:
@@ -564,14 +713,28 @@ def build_parser() -> argparse.ArgumentParser:
     repo.add_argument("path", nargs="?", default=".")
     repo.add_argument("--fix", action="store_true", help="apply conservative package-manager remediation where supported")
     repo.add_argument("--scan-mode", choices=("quick", "standard", "deep"), default="standard", help="quick skips optional heavy scanners; deep adds license scanning")
+    repo.add_argument("-n", "--non-interactive", action="store_true", help="run headlessly and return a CI-friendly exit code")
+    repo.add_argument("--instruction", help="custom focus or rules of engagement for agent-led review")
+    repo.add_argument("--instruction-file", help="file containing custom focus or rules of engagement")
+    repo.add_argument("--scope-mode", choices=("auto", "diff", "full"), default="auto", help="record full or changed-file review scope")
+    repo.add_argument("--diff-base", help="git base ref used for diff scope metadata")
+    repo.add_argument("--fail-on", choices=("critical", "high", "medium", "low", "info"), default="high", help="CI exits 2 for confirmed findings at or above this severity")
+    repo.add_argument("--include-tests", action="store_true", help="include test and fixture directories in source-pattern review")
     repo.set_defaults(func=audit_repo)
 
     web = sub.add_parser("web", aliases=["url"], help="audit a web application or URL")
     web.add_argument("url")
     web.add_argument("--authorized", action="store_true", help="confirm you own or have permission to assess the target")
     web.add_argument("--active", action="store_true", help="run controlled active SQLi/XSS validation; requires --authorized")
+    web.add_argument("--browser", action="store_true", help="run an optional Playwright browser baseline; requires --authorized --active")
     web.add_argument("--baseline-only", action="store_true", help="run bounded web checks and skip long optional surface scanners")
     web.set_defaults(func=audit_web)
+
+    api = sub.add_parser("api", help="inventory an OpenAPI/Swagger JSON contract and optionally probe safe read-only endpoints")
+    api.add_argument("spec", help="OpenAPI/Swagger JSON file")
+    api.add_argument("--base-url", help="live API base URL for bounded read-only probing")
+    api.add_argument("--authorized", action="store_true", help="confirm permission to probe the supplied API")
+    api.set_defaults(func=audit_api)
 
     server = sub.add_parser("server", help="audit local hardening or an authorized server's external attack surface")
     group = server.add_mutually_exclusive_group(required=True)
@@ -579,13 +742,37 @@ def build_parser() -> argparse.ArgumentParser:
     group.add_argument("--target")
     server.add_argument("--authorized", action="store_true", help="confirm authorization for remote scanning")
     server.set_defaults(func=audit_server)
+
+    scan = sub.add_parser("scan", help="audit multiple local repositories and authorized web targets")
+    scan.add_argument("-t", "--target", action="append", help="local directory or http(s) URL; may be repeated")
+    scan.add_argument("--target-list", action="append", help="file containing one target per non-empty, non-comment line")
+    scan.add_argument("-n", "--non-interactive", action="store_true", help="run headlessly")
+    scan.add_argument("--authorized", action="store_true", help="authorize remote baseline/scanning for supplied web targets")
+    scan.add_argument("--active", action="store_true", help="enable controlled active web checks; requires --authorized")
+    scan.add_argument("--baseline-only", action="store_true", help="only run bounded web baseline checks")
+    scan.add_argument("--scan-mode", choices=("quick", "standard", "deep"), default="standard")
+    scan.add_argument("--instruction")
+    scan.add_argument("--instruction-file")
+    scan.add_argument("--scope-mode", choices=("auto", "diff", "full"), default="auto")
+    scan.add_argument("--diff-base")
+    scan.add_argument("--fail-on", choices=("critical", "high", "medium", "low", "info"), default="high")
+    scan.set_defaults(func=audit_scan)
     return parser
 
 
 def main() -> int:
     REPORT_ROOT.mkdir(parents=True, exist_ok=True)
-    args = build_parser().parse_args()
-    return int(args.func(args))
+    try:
+        args = build_parser().parse_args()
+        return int(args.func(args))
+    except KeyboardInterrupt:
+        print("AgentSec: interrupted; preserved artifacts remain available in .agentsec/reports.", file=sys.stderr)
+        return 130
+    except (OSError, ValueError, RuntimeError) as exc:
+        # CLI failures should be actionable without dumping a traceback or
+        # hiding the distinction between a failed check and a failed run.
+        print(f"AgentSec: audit could not complete safely: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

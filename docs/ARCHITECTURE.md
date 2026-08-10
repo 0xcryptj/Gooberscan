@@ -135,6 +135,7 @@ Repository
    +--> findings.json (unconfirmed review queue)
    +--> findings.sarif
    +--> raw scanner output
+   +--> run.json / events.jsonl / agents.json
    |
    v
 AI agent correlates evidence with source/config

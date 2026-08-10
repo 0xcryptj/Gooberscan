@@ -111,6 +111,12 @@ Use AgentSec to implement the safe high-priority fixes and retest them.
 ```bash
 ./agentsec repo .
 ./agentsec repo . --scan-mode deep
+./agentsec repo . --non-interactive --fail-on high
+./agentsec repo . --scope-mode diff --diff-base origin/main --instruction-file rules.md
+./agentsec scan --target ./app --target https://staging.example.com --authorized --non-interactive
+./agentsec scan --target-list ./targets.txt --scan-mode quick --non-interactive
+./agentsec api ./openapi.json
+./agentsec api ./openapi.json --base-url https://staging.example.com --authorized
 ./agentsec server --local
 ./agentsec web https://staging.example.com --authorized
 ./agentsec web https://staging.example.com --authorized --baseline-only
@@ -126,6 +132,16 @@ Each audit preserves raw tool output and writes a machine-readable
 runtime architecture. The same run also emits `findings.sarif` for GitHub Code
 Scanning and other SARIF-compatible systems.
 
+JSON output from Trivy, Semgrep, and npm audit is normalized into
+evidence-backed findings with severity, affected location, dependency/CVE
+metadata, remediation, and deterministic deduplication. Each run also emits
+`vulnerabilities.json`, `vulnerabilities.csv`, per-finding Markdown, and
+`penetration_test_report.md`. A non-zero scanner result without parseable
+finding evidence remains explicitly `review-needed` until it is correlated with
+source and runtime architecture. The `scan` command accepts multiple local or
+authorized HTTP(S) targets and target-list files. Headless repository runs
+return exit code `2` when evidence-backed findings meet `--fail-on`.
+
 The included [security report workflow](.github/workflows/agentsec-security-report.yml)
 publishes the report as a pull-request artifact and uploads SARIF to GitHub Code
 Scanning when repository permissions allow it.
@@ -140,6 +156,12 @@ Open the latest report locally with the private viewer:
 
 The viewer binds to `127.0.0.1`, uses a random token in the URL, serves only the
 selected report run, and shuts down with `Ctrl-C`.
+
+Every run also persists `run.json`, append-only `events.jsonl`, and
+`agents.json`. The viewer exposes token-protected `/api/state` and `/api/events`
+endpoints for local dashboards and automation to follow specialist progress.
+The specialist workers are deterministic local agents today and share a stable
+task/event contract with future LLM coordination.
 
 Website audit prompt:
 

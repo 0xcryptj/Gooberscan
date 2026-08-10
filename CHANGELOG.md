@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Added normalized Trivy, Semgrep, and npm-audit vulnerability/misconfiguration
+  records with severity, locations, remediation, CVE/CWE metadata, deduplication,
+  CSV/JSON/Markdown artifacts, and an executive report.
+- Added Strix-style `scan` target orchestration, target-list files, instructions,
+  diff-scope metadata, non-interactive execution, and severity-based CI gating.
+- Added top-level interruption and expected I/O/runtime error handling so failed
+  audits return actionable messages without an unnecessary traceback.
+
 All notable AgentSec changes are documented here.
 
 ## Unreleased

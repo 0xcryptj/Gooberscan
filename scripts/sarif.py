@@ -45,7 +45,7 @@ def build_sarif(findings: list[dict[str, Any]], *, version: str = "development")
                     f"{finding.get('title', 'Security evidence requires review')}: "
                     f"{finding.get('reason', 'correlate the evidence with source and runtime context')}. "
                     f"Recommended action: {finding.get('recommendation', 'correlate with source and runtime context')}. "
-                    "This is not a confirmed vulnerability."
+                    + ("This is evidence-backed and should be validated before remediation is merged." if finding.get("status") == "evidence-backed" else "This is not a confirmed vulnerability.")
                 ),
             },
             "properties": {

@@ -49,11 +49,23 @@ def render_dashboard(run_dir: Path) -> str:
     findings = _read_json(run_dir / "findings.json", [])
     if not isinstance(findings, list):
         findings = []
+    agents = _read_json(run_dir / "agents.json", [])
+    if not isinstance(agents, list):
+        agents = []
+    run_record = _read_json(run_dir / "run.json", {})
+    if not isinstance(run_record, dict):
+        run_record = {}
     scope = _text(summary.get("scope", run_dir.name))
     created = _text(summary.get("created_at", "unknown"))
     finding_markup = "".join(
         _finding_card(item) for item in findings if isinstance(item, dict)
     )
+    agent_markup = "".join(
+        f'<article class="agent"><strong>{_text(item.get("name", "agent"))}</strong><span class="agent-status">{_text(item.get("status", "unknown"))}</span><p>{_text(item.get("detail", ""))}</p></article>'
+        for item in agents if isinstance(item, dict)
+    )
+    if not agent_markup:
+        agent_markup = '<div class="empty">No specialist-agent state recorded.</div>'
     if not finding_markup:
         finding_markup = '<div class="empty">No deterministic checks currently require review.</div>'
 
@@ -68,13 +80,14 @@ header img {{ width:58px; height:58px; border-radius:14px; }} h1 {{ margin:0; fo
 .eyebrow {{ color:var(--red); font-weight:700; letter-spacing:.12em; text-transform:uppercase; font-size:11px }} .meta {{ color:var(--muted); margin:4px 0 0; }}
 .grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:24px }} .stat,.finding {{ background:color-mix(in srgb,var(--panel) 92%,transparent); border:1px solid var(--line); border-radius:14px; padding:18px; }}
 .stat strong {{ display:block; font-size:25px }} .stat span {{ color:var(--muted); font-size:12px }} .findings {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px }}
-.finding-top {{ display:flex; justify-content:space-between; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em }} .pill {{ color:var(--green); }} .finding p {{ color:var(--muted); min-height:48px }}
+.finding-top {{ display:flex; justify-content:space-between; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em }} .pill {{ color:var(--green); }} .finding p {{ color:var(--muted); min-height:48px }} .agents {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px }} .agent {{ background:color-mix(in srgb,var(--panel) 92%,transparent); border:1px solid var(--line); border-radius:14px; padding:15px }} .agent-status {{ float:right; color:var(--green); font-size:12px; text-transform:uppercase }} .agent p {{ color:var(--muted); font-size:13px; }}
 dl {{ border-top:1px solid var(--line); padding-top:12px; margin-bottom:0 }} dt {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em }} dd {{ margin:2px 0 10px; overflow-wrap:anywhere }} code {{ color:#ff9d96 }} .empty {{ border:1px dashed var(--line); border-radius:14px; padding:28px; color:var(--muted); }}
 @media(max-width:700px) {{ .grid {{ grid-template-columns:1fr }} main {{ padding-top:24px }} }}
 </style></head><body><main>
-<header><img src="/agentsec-logo.png" alt="AgentSec"><div><div class="eyebrow">Audit · Reason · Remediate · Verify</div><h1>AgentSec report</h1><p class="meta">{scope}<br>Created {created}</p></div></header>
+<header><img src="/agentsec-logo.png" alt="AgentSec"><div><div class="eyebrow">Audit · Reason · Remediate · Verify</div><h1>AgentSec report</h1><p class="meta">{scope}<br>Created {created}<br>Status {_text(run_record.get("status", "unknown"))}</p></div></header>
 <section class="grid"><div class="stat"><strong>{len(findings)}</strong><span>Findings and observations</span></div><div class="stat"><strong>{_text((summary.get("finding_status_counts") or {}).get("review-needed", 0))}</strong><span>Review needed</span></div><div class="stat"><strong>{_text((summary.get("finding_status_counts") or {}).get("opportunity", 0))}</strong><span>Opportunities</span></div><div class="stat"><strong>Local</strong><span>Report stays on this machine</span></div></section>
 <h2>Review queue</h2><section class="findings">{finding_markup}</section>
+<h2>Specialist agents</h2><section class="agents">{agent_markup}</section>
 <h2>Artifacts</h2><p class="meta"><code>summary.json</code> · <code>findings.json</code> · <code>findings.sarif</code> · preserved scanner output</p>
 </main></body></html>"""
 
@@ -122,6 +135,17 @@ def serve(report_root: Path, run_name: str | None = None, *, port: int = 0, open
             if path == "/" or path == "/index.html":
                 payload = html_page
                 content_type = "text/html; charset=utf-8"
+            elif path == "/api/state":
+                state = {"run": _read_json(run_dir / "run.json", {}), "agents": _read_json(run_dir / "agents.json", []), "findings": _read_json(run_dir / "findings.json", [])}
+                payload = json.dumps(state, ensure_ascii=False).encode("utf-8")
+                content_type = "application/json; charset=utf-8"
+            elif path == "/api/events":
+                try:
+                    events = [json.loads(line) for line in (run_dir / "events.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+                except (OSError, UnicodeError, json.JSONDecodeError):
+                    events = []
+                payload = json.dumps(events, ensure_ascii=False).encode("utf-8")
+                content_type = "application/json; charset=utf-8"
             elif path == "/agentsec-logo.png" and logo_path.is_file():
                 payload = logo_path.read_bytes()
                 content_type = "image/png"

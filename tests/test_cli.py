@@ -5,10 +5,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from scripts.agentsec import architecture_observations, build_parser, save_summary, url_parts
-from scripts.finding_model import finding_from_check, finding_from_observation, write_findings
+from scripts.finding_model import finding_from_check, finding_from_observation, findings_from_check, write_findings
 from scripts.sarif import build_sarif
 from scripts.viewer import list_runs, render_dashboard, select_run
 from scripts.web_baseline import analyze_responses
+from scripts.scan_session import ScanSession
+from scripts.api_probe import inventory, load_spec
+from scripts.source_security import scan, write as write_source
 
 
 class CliTests(unittest.TestCase):
@@ -180,6 +183,27 @@ class CliTests(unittest.TestCase):
         self.assertIn("robots.txt not observed", titles)
         self.assertIn("Database security not observable from public HTML", titles)
 
+    def test_web_baseline_detects_shared_spa_soft_404_without_root_body(self):
+        shell = "<html><head><title>Sharp Shot</title></head><body>app</body></html>"
+        root = {"headers": {"content-type": "text/html"}, "body_sample": ""}
+        paths = {
+            "/.env": {"status": 200, "headers": {"content-type": "text/html"}, "body_sample": shell},
+            "/backup.zip": {"status": 200, "headers": {"content-type": "text/html"}, "body_sample": shell},
+            "/api": {"status": 200, "headers": {"content-type": "text/html"}, "body_sample": shell},
+        }
+        observations = analyze_responses(root, paths)
+        exposure_titles = {item["title"] for item in observations if item["category"] == "exposure"}
+        self.assertNotIn("Potentially exposed Environment File", exposure_titles)
+        self.assertNotIn("Potentially exposed Backup Archive", exposure_titles)
+
+    def test_web_baseline_does_not_turn_unreachable_target_into_path_findings(self):
+        observations = analyze_responses(
+            {"status": None, "error": "DNS lookup failed", "headers": {}, "body_sample": ""},
+            {"/.env": {"status": None, "body_sample": ""}},
+        )
+        self.assertEqual([item["title"] for item in observations], ["Target baseline unavailable"])
+        self.assertEqual(observations[0]["status"], "review-needed")
+
     def test_web_baseline_only_flag_is_available(self):
         args = build_parser().parse_args(["web", "https://example.com", "--authorized", "--baseline-only"])
         self.assertTrue(args.authorized)
@@ -203,6 +227,83 @@ class CliTests(unittest.TestCase):
         for mode in ("quick", "standard", "deep"):
             args = build_parser().parse_args(["repo", ".", "--scan-mode", mode])
             self.assertEqual(args.scan_mode, mode)
+
+    def test_scan_accepts_repeated_targets_and_ci_options(self):
+        args = build_parser().parse_args([
+            "scan", "-t", ".", "-t", "https://example.com", "--target-list", "targets.txt",
+            "-n", "--scope-mode", "diff", "--diff-base", "origin/main", "--fail-on", "medium",
+        ])
+        self.assertEqual(args.target, [".", "https://example.com"])
+        self.assertEqual(args.target_list, ["targets.txt"])
+        self.assertTrue(args.non_interactive)
+        self.assertEqual(args.scope_mode, "diff")
+        self.assertEqual(args.fail_on, "medium")
+
+    def test_trivy_json_is_normalized_with_actionable_fields(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "trivy.txt"
+            output.write_text(json.dumps({"Results": [{"Target": "Dockerfile", "Misconfigurations": [{
+                "ID": "DS002", "Title": "Root user", "Severity": "HIGH", "Resolution": "Use a non-root user",
+            }]}]}), encoding="utf-8")
+            findings = findings_from_check({"name": "trivy-filesystem", "returncode": 1, "output": str(output)})
+            self.assertEqual(findings[0]["status"], "evidence-backed")
+            self.assertEqual(findings[0]["severity"], "high")
+            self.assertEqual(findings[0]["location"], "Dockerfile")
+            self.assertIn("non-root", findings[0]["recommendation"])
+
+    def test_scan_session_persists_events_and_agent_state(self):
+        with TemporaryDirectory() as directory:
+            run = Path(directory) / "run"
+            run.mkdir()
+            session = ScanSession.start(run, "test scope")
+            session.agent("recon", "started", detail="mapping")
+            session.agent("recon", "completed", result={"count": 2})
+            session.finish()
+            record = json.loads((run / "run.json").read_text(encoding="utf-8"))
+            agents = json.loads((run / "agents.json").read_text(encoding="utf-8"))
+            events = (run / "events.jsonl").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(record["status"], "completed")
+            self.assertEqual(agents[0]["status"], "completed")
+            self.assertGreaterEqual(len(events), 4)
+
+    def test_openapi_inventory_rejects_invalid_contract(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "api.json"
+            path.write_text('{"openapi":"3.0.0","paths":{"/health":{"get":{"operationId":"health"}}}}', encoding="utf-8")
+            self.assertEqual(inventory(load_spec(path))[0]["method"], "GET")
+            path.write_text('{"openapi":"3.0.0"}', encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_spec(path)
+
+    def test_source_security_finds_high_risk_patterns_with_locations(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text("import subprocess\nsubprocess.run(user_value, shell=True)\n", encoding="utf-8")
+            findings = scan(root)
+            self.assertEqual(findings[0]["severity"], "high")
+            self.assertEqual(findings[0]["location"], "app.py:2")
+            self.assertEqual(findings[0]["cwe"], "CWE-78")
+
+    def test_source_security_ignores_safe_subprocess_and_test_fixtures_by_default(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text("subprocess.run(['git', 'status'])\n", encoding="utf-8")
+            fixture = root / "tests"
+            fixture.mkdir()
+            (fixture / "fixture.py").write_text("subprocess.run(user_value, shell=True)\n", encoding="utf-8")
+            self.assertEqual(scan(root), [])
+            self.assertEqual(scan(root, include_tests=True)[0]["location"], "tests/fixture.py:1")
+
+    def test_source_security_patterns_remain_review_needed(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "source.json"
+            (root / "app.py").write_text("subprocess.run(user_value, shell=True)\n", encoding="utf-8")
+            write_source(root, output)
+            findings = findings_from_check({"name": "source-security-patterns", "returncode": 1, "output": str(output)})
+            self.assertEqual(findings[0]["status"], "review-needed")
+            self.assertEqual(findings[0]["confidence"], "unconfirmed")
 
     def test_web_baseline_ignores_spa_soft_404s(self):
         from scripts.web_baseline import PATHS

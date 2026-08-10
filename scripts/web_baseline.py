@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+from collections import Counter
 from pathlib import Path
 import re
 import subprocess
@@ -104,7 +105,25 @@ def analyze_responses(root: dict[str, Any], paths: dict[str, dict[str, Any]]) ->
     observations: list[dict[str, Any]] = []
     headers = root.get("headers", {})
     root_body = root.get("body_sample", "")
+    if root.get("status") is None and root.get("error"):
+        return [_observation(
+            "Target baseline unavailable", "availability", "review-needed",
+            f"The root request did not complete: {root.get('error')}",
+            "Verify DNS, TLS, routing, and the authorized assessment path before interpreting endpoint results.",
+        )]
     root_fingerprint = hashlib.sha256(root_body.encode("utf-8", errors="replace")).hexdigest() if root_body else None
+    # SPA hosts frequently return HTTP 200 plus the same HTML shell for every
+    # unknown path. If the root body was unavailable (for example, a proxy
+    # returned headers separately), infer the shared shell from repeated probe
+    # responses instead of treating every path as exposed.
+    html_probe_fingerprints = Counter(
+        hashlib.sha256(str(response.get("body_sample", "")).encode("utf-8", errors="replace")).hexdigest()
+        for response in paths.values()
+        if response.get("status") == 200
+        and "html" in str((response.get("headers") or {}).get("content-type", "")).lower()
+        and response.get("body_sample")
+    )
+    shared_html_fingerprints = {fingerprint for fingerprint, count in html_probe_fingerprints.items() if count >= 2}
     expected_headers = {
         "content-security-policy": "Define a CSP appropriate to the application and enforce it server-side.",
         "x-content-type-options": "Send X-Content-Type-Options: nosniff.",
@@ -123,8 +142,8 @@ def analyze_responses(root: dict[str, Any], paths: dict[str, dict[str, Any]]) ->
 
     if headers.get("access-control-allow-origin", "").strip() == "*":
         observations.append(_observation(
-            "Wildcard CORS policy observed", "cors", "review-needed",
-            "The final response sends Access-Control-Allow-Origin: *.",
+            "Wildcard CORS policy observed", "cors", "review-needed",  # agentsec: ignore
+            "The final response sends Access-Control-Allow-Origin: *.",  # agentsec: ignore
             "Confirm that every public response can be shared cross-origin; restrict origins and credentials for authenticated APIs.",
         ))
 
@@ -157,6 +176,8 @@ def analyze_responses(root: dict[str, Any], paths: dict[str, dict[str, Any]]) ->
             and root_fingerprint
             and hashlib.sha256(body.encode("utf-8", errors="replace")).hexdigest() == root_fingerprint
         )
+        if not soft_404 and status == 200 and "html" in content_type and body:
+            soft_404 = hashlib.sha256(body.encode("utf-8", errors="replace")).hexdigest() in shared_html_fingerprints
         if path == "/robots.txt":
             if status == 200 and not soft_404 and "html" not in content_type and body.strip():
                 observations.append(_observation("robots.txt present", "crawler-policy", "observed", "A crawler policy is published.", "Keep disallowed paths free of secrets; robots.txt is not an access-control mechanism.", security_control=False))
@@ -182,6 +203,12 @@ def analyze_responses(root: dict[str, Any], paths: dict[str, dict[str, Any]]) ->
                 f"Potentially exposed {label}", "exposure", "review-needed",
                 f"{path} returned HTTP 200.{marker}",
                 "Confirm whether this endpoint/file is intentionally public; remove or restrict it if it exposes configuration, metadata, backups, or operational endpoints.",
+            ))
+        elif status == 200 and soft_404:
+            observations.append(_observation(
+                f"No public {PATHS[path].replace('-', ' ')} response observed", "exposure", "not-observed",
+                f"{path} returned HTTP 200 with the shared HTML application shell (soft-404 behavior).",
+                "Confirm the route remains a non-sensitive application fallback and does not expose data for alternate methods or content types.",
             ))
         elif status in {401, 403}:
             observations.append(_observation(f"Protected {PATHS[path].replace('-', ' ')} path", "exposure", "observed", f"{path} returned HTTP {status}.", "Keep authorization server-side and verify the response does not leak sensitive metadata."))

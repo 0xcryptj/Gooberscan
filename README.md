@@ -17,7 +17,7 @@
   <a href="https://github.com/0xcryptj/AgentSec/actions/workflows/agentsec-ci.yml"><img src="https://github.com/0xcryptj/AgentSec/actions/workflows/agentsec-ci.yml/badge.svg" alt="AgentSec CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-e30613.svg" alt="MIT license" /></a>
   <a href="VERSION"><img src="https://img.shields.io/badge/version-1.2.1-111111.svg" alt="Version 1.2.1" /></a>
-  <a href="docs/CAPABILITIES.md"><img src="https://img.shields.io/badge/capabilities-5-e30613.svg" alt="Five capabilities" /></a>
+  <a href="docs/CAPABILITIES.md"><img src="https://img.shields.io/badge/capabilities-13-e30613.svg" alt="Thirteen capabilities" /></a>
 </p>
 
 <p>
@@ -123,6 +123,14 @@ framework context, workflows, and verification criteria:
 | `api-contract-review` | OpenAPI inventory and bounded probes |
 | `server-hardening-review` | Host and service exposure |
 | `remediation-and-verification` | Root-cause fixes and retesting |
+| `identity-and-access-review` | Authentication, authorization, and tenant boundaries |
+| `secrets-and-sensitive-data-review` | Credentials, artifacts, and sensitive data |
+| `ci-cd-supply-chain-review` | Workflow, build, and release trust boundaries |
+| `cloud-security-review` | Cloud identity, storage, network, and edge controls |
+| `container-security-review` | Images, runtime privileges, and orchestration |
+| `ai-agent-security-review` | Prompt injection, tools, MCP, and agent authority |
+| `incident-response-triage` | Evidence preservation, containment, and recovery |
+| `vulnerability-prioritization-review` | Deduplicated, actionable remediation queues |
 
 Browse or search them from the CLI:
 

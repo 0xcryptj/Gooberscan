@@ -2,8 +2,22 @@
   "schema_version": "1.0.0",
   "project": "AgentSec",
   "repository": "https://github.com/0xcryptj/AgentSec",
-  "total_capabilities": 5,
+  "total_capabilities": 13,
   "capabilities": [
+    {
+      "name": "ai-agent-security-review",
+      "description": "Review AI agents, tool calls, MCP servers, prompts, retrieval, memory, and model-facing data for prompt injection, tool poisoning, excessive authority, and sensitive-data leakage. Use when security-sensitive automation is agentic.",
+      "domain": "cybersecurity",
+      "subdomain": "ai-security",
+      "tags": [
+        "ai-security",
+        "prompt-injection",
+        "mcp",
+        "tool-calling"
+      ],
+      "version": "1.0",
+      "path": "skills/ai-agent-security-review"
+    },
     {
       "name": "api-contract-review",
       "description": "Inventory an OpenAPI or Swagger contract and safely probe bounded read-only endpoints for authentication, error handling, and exposure signals. Use when an API specification is available for an authorized service.",
@@ -17,6 +31,76 @@
       ],
       "version": "1.0",
       "path": "skills/api-contract-review"
+    },
+    {
+      "name": "ci-cd-supply-chain-review",
+      "description": "Review CI/CD workflows, build identities, third-party actions, artifacts, dependency installation, and deployment approvals for supply-chain risk. Use before trusting an automated build or release pipeline.",
+      "domain": "cybersecurity",
+      "subdomain": "devsecops",
+      "tags": [
+        "ci-cd",
+        "supply-chain",
+        "github-actions",
+        "provenance"
+      ],
+      "version": "1.0",
+      "path": "skills/ci-cd-supply-chain-review"
+    },
+    {
+      "name": "cloud-security-review",
+      "description": "Review cloud identities, storage, networks, managed services, logging, and edge controls for least privilege and unintended exposure. Use when an application depends on AWS, Azure, GCP, Cloudflare, or managed backend services.",
+      "domain": "cybersecurity",
+      "subdomain": "cloud-security",
+      "tags": [
+        "cloud",
+        "iam",
+        "storage",
+        "networking"
+      ],
+      "version": "1.0",
+      "path": "skills/cloud-security-review"
+    },
+    {
+      "name": "container-security-review",
+      "description": "Review container images, Dockerfiles, runtime privileges, secrets, network exposure, and orchestration configuration for practical hardening gaps. Use when an application is built or deployed in containers.",
+      "domain": "cybersecurity",
+      "subdomain": "container-security",
+      "tags": [
+        "docker",
+        "kubernetes",
+        "images",
+        "runtime"
+      ],
+      "version": "1.0",
+      "path": "skills/container-security-review"
+    },
+    {
+      "name": "identity-and-access-review",
+      "description": "Review authentication, authorization, session, privilege, and tenant-boundary controls in an application or service. Use when identity paths or high-impact actions are in scope and least privilege must be verified.",
+      "domain": "cybersecurity",
+      "subdomain": "identity-access-management",
+      "tags": [
+        "authentication",
+        "authorization",
+        "least-privilege",
+        "sessions"
+      ],
+      "version": "1.0",
+      "path": "skills/identity-and-access-review"
+    },
+    {
+      "name": "incident-response-triage",
+      "description": "Triage suspected compromise using evidence preservation, scope assessment, containment planning, credential review, and recovery sequencing. Use when logs, alerts, package incidents, or runtime behavior suggest an active security event.",
+      "domain": "cybersecurity",
+      "subdomain": "incident-response",
+      "tags": [
+        "incident-response",
+        "triage",
+        "containment",
+        "evidence"
+      ],
+      "version": "1.0",
+      "path": "skills/incident-response-triage"
     },
     {
       "name": "remediation-and-verification",
@@ -47,6 +131,20 @@
       "path": "skills/repository-security-review"
     },
     {
+      "name": "secrets-and-sensitive-data-review",
+      "description": "Find exposed secrets, credentials, private keys, sensitive artifacts, logs, backups, and unsafe data flows in a repository or deployment surface. Use before release or after suspected credential exposure.",
+      "domain": "cybersecurity",
+      "subdomain": "data-protection",
+      "tags": [
+        "secrets",
+        "credentials",
+        "privacy",
+        "artifacts"
+      ],
+      "version": "1.0",
+      "path": "skills/secrets-and-sensitive-data-review"
+    },
+    {
       "name": "server-hardening-review",
       "description": "Review a local Linux host or authorized server exposure for patch state, listening services, SSH, firewall, permissions, containers, and web roots. Use it when deployment or host hardening is part of the security scope.",
       "domain": "cybersecurity",
@@ -59,6 +157,20 @@
       ],
       "version": "1.0",
       "path": "skills/server-hardening-review"
+    },
+    {
+      "name": "vulnerability-prioritization-review",
+      "description": "Correlate vulnerability evidence with asset criticality, exploitability, exposure, reachability, and remediation cost to produce an actionable queue. Use when scanner output is large, duplicated, or difficult to prioritize.",
+      "domain": "cybersecurity",
+      "subdomain": "vulnerability-management",
+      "tags": [
+        "vulnerability-management",
+        "prioritization",
+        "cvss",
+        "remediation"
+      ],
+      "version": "1.0",
+      "path": "skills/vulnerability-prioritization-review"
     },
     {
       "name": "web-application-baseline",
@@ -77,16 +189,22 @@
   ],
   "coverage": {
     "subdomains": {
+      "ai-security": 1,
       "api-security": 1,
-      "devsecops": 1,
+      "cloud-security": 1,
+      "container-security": 1,
+      "data-protection": 1,
+      "devsecops": 2,
+      "identity-access-management": 1,
+      "incident-response": 1,
       "network-security": 1,
-      "vulnerability-management": 1,
+      "vulnerability-management": 2,
       "web-application-security": 1
     },
     "framework_mappings": {
-      "mitre_attack": 5,
-      "nist_csf": 5,
-      "owasp": 5
+      "mitre_attack": 13,
+      "nist_csf": 13,
+      "owasp": 13
     }
   }
 }

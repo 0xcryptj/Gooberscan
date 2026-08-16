@@ -5,6 +5,9 @@
 - Added modular capability playbooks with searchable discovery metadata,
   framework mappings, validation tooling, and generated catalog output.
 - Added `agentsec capabilities [query]` for capability discovery.
+- Expanded the capability library with identity, secrets, CI/CD supply chain,
+  cloud, containers, AI-agent security, incident response, and vulnerability
+  prioritization playbooks.
 - Added a contributor `Makefile`, CLI reference, citation metadata, code of
   conduct, and editor configuration.
 - Added normalized Trivy, Semgrep, and npm-audit vulnerability/misconfiguration

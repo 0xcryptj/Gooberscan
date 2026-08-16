@@ -1,231 +1,230 @@
-# Install AgentSec
+<div align="center">
 
-[![AgentSec CI](https://github.com/0xcryptj/AgentSec/actions/workflows/agentsec-ci.yml/badge.svg)](https://github.com/0xcryptj/AgentSec/actions/workflows/agentsec-ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<img src="assets/agentsec-logo.png" alt="AgentSec" width="128" />
 
-The polished one-line installer installs AgentSec as a global skill for supported coding agents:
+# Agent<span style="color:#ef2b20">Sec</span>
 
-```bash
-curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/0xcryptj/AgentSec/v1.2.1/install.sh | bash
-```
+### Security for AI-built software.
 
-Prefer to inspect the script first? Run it locally after cloning:
+<p>
+  <strong>Audit</strong>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <strong>Reason</strong>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <strong>Remediate</strong>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <strong>Verify</strong>
+</p>
 
-```bash
-./install.sh
-```
+<p>
+  <a href="https://github.com/0xcryptj/AgentSec/actions/workflows/agentsec-ci.yml"><img src="https://github.com/0xcryptj/AgentSec/actions/workflows/agentsec-ci.yml/badge.svg" alt="AgentSec CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-e30613.svg" alt="MIT license" /></a>
+  <a href="VERSION"><img src="https://img.shields.io/badge/version-1.2.1-111111.svg" alt="Version 1.2.1" /></a>
+  <a href="docs/CAPABILITIES.md"><img src="https://img.shields.io/badge/capabilities-5-e30613.svg" alt="Five capabilities" /></a>
+</p>
 
-Or use the underlying skills CLI directly:
+<p>
+  An agent skill and deterministic CLI that helps coding agents understand architecture,
+  find meaningful security problems, apply safe fixes, and verify the result.
+</p>
+
+</div>
+
+<p align="center">
+  <img src="assets/agentsec-hero.jpg" alt="AgentSec — audit, reason, remediate, verify" width="100%" />
+</p>
+
+## Why AgentSec
+
+AI-built software moves quickly. Security review should keep up without becoming
+noise.
+
+AgentSec combines progressive security guidance with deterministic evidence
+collection. It gives an agent enough architecture context to reason about risk,
+keeps scanner output explainable, and preserves the raw evidence needed to
+verify a fix.
+
+| Understand | Find | Fix | Prove |
+| --- | --- | --- | --- |
+| Architecture, trust boundaries, identities, and sensitive assets | Dependencies, secrets, misconfigurations, exposed surfaces, and risky source patterns | Root-cause code, configuration, dependency, and hardening changes | Focused regression checks, normalized findings, SARIF, and preserved evidence |
+
+## Start in 60 seconds
+
+Install AgentSec as a skill for your coding agent:
 
 ```bash
 npx skills add 0xcryptj/AgentSec --skill agentsec --agent '*' -g -y
 ```
 
-The wildcard target installs AgentSec across every agent supported by the `skills` CLI, including Codex, Claude Code, Cursor, Cline, Amp and other compatible coding agents. For one agent only, use its CLI identifier:
-
-```bash
-npx skills add 0xcryptj/AgentSec --skill agentsec --agent codex -g -y
-npx skills add 0xcryptj/AgentSec --skill agentsec --agent claude-code -g -y
-npx skills add 0xcryptj/AgentSec --skill agentsec --agent cursor -g -y
-```
-
-Then say:
+Then ask your agent:
 
 ```text
-Use AgentSec to audit this project and propose the simplest safe fixes.
+Use AgentSec to audit this project, explain the highest-priority risks,
+and propose the simplest safe fixes.
 ```
 
-<p align="center">
-  <a href="https://github.com/0xcryptj/AgentSec">
-    <img src="assets/agentsec-logo.png" alt="AgentSec logo" width="132" />
-  </a>
-</p>
-
-<p align="center">
-  <img src="assets/agentsec-hero.jpg" alt="AgentSec - Spy on threats. Secure everything." width="100%" />
-</p>
-
-# AgentSec
-
-**A senior security engineer for AI-built software.**
-
-AgentSec is an Agent Skill for vibe-coded and AI-assisted projects. It helps your coding agent understand the repo, find meaningful security problems, check current threat intelligence, explain what matters, rewrite insecure code or configuration, and verify the fix.
-
-## What it does
-
-- Reads repositories progressively instead of wasting context on every file.
-- Reviews code, authentication, authorization, dependencies, servers, CI/CD, cloud and edge configuration.
-- Checks current package advisories and malware intelligence when network access is available.
-- Finds vulnerable or malicious dependencies, secrets, exposed files, weak permissions, injection flaws and risky architecture.
-- Tells the coding agent how the code or configuration should change.
-- Verifies fixes with focused security checks and normal project tests when possible.
-
-## KISS
-
-**Keep It Simple, Stupid.**
-
-AgentSec prefers security that people can understand, operate and maintain.
-
-Secure defaults, least privilege, server-side authorization, standard cryptography, parameterized queries and small reviewable fixes beat unnecessary complexity.
-
-Complexity is only worth adding when the reduction in risk justifies it.
-
-## Standards
-
-AgentSec is **standards-led and tool-assisted**.
-
-Primary references:
-
-- **OWASP ASVS 5.0.0** for application security requirements
-- **OWASP Top 10:2025** for high-level application risk categories
-- **OWASP WSTG** for web testing methodology
-- **CWE** for weakness classification
-- **CIS Benchmarks** for infrastructure and server hardening
-- **NIST SSDF** for secure software-development practices
-
-AgentSec can correlate evidence from tools such as **Burp Suite**, **SonarQube**, **Snyk**, Semgrep, Trivy, OSV-Scanner, Gitleaks, npm audit, ZAP, Nmap and others.
-
-The standard defines what good looks like. The scanner provides evidence. AgentSec reasons about the actual architecture and root cause.
-
-See [`references/standards-and-tools.md`](references/standards-and-tools.md).
-
-## Try it
-
-```text
-Use AgentSec to audit this repo. Understand the architecture first, then find the highest-priority security issues and propose KISS fixes.
-```
-
-```text
-Use AgentSec to review authentication and authorization. Check least privilege, MFA, sessions, admin access and tenant boundaries.
-```
-
-```text
-Use AgentSec to check our dependencies for vulnerable or compromised packages and safely fix high-confidence issues.
-```
-
-```text
-Use AgentSec to implement the safe high-priority fixes and retest them.
-```
-
-## Direct CLI
+Or run the bundled CLI directly:
 
 ```bash
 ./agentsec repo .
+```
+
+## A security workflow, not scanner noise
+
+```mermaid
+flowchart LR
+    A[Repository or authorized target] --> B[Architecture map]
+    B --> C[Deterministic evidence]
+    C --> D[Agent correlation]
+    D --> E{Finding class}
+    E -->|Confirmed| F[Root-cause remediation]
+    E -->|Review needed| G[Targeted investigation]
+    E -->|Opportunity| H[Defense-in-depth improvement]
+    F --> I[Retest and preserve evidence]
+    G --> I
+    H --> I
+```
+
+AgentSec deliberately separates:
+
+- **Confirmed vulnerabilities** — evidence demonstrates an unsafe condition.
+- **Security design gaps** — architecture shows a weak or missing control.
+- **Security opportunities** — useful hardening or resilience improvements.
+- **Review-needed items** — signals that require source, runtime, or provider correlation.
+
+Scanner output is evidence, not a verdict.
+
+## What it covers
+
+### Repository and supply chain
+
+Architecture inventory, source-security patterns, dependency advisories, npm
+signatures, optional OSV/Trivy/Semgrep/Gitleaks/pip-audit/cargo-audit checks,
+sensitive-artifact discovery, and current package intelligence.
+
+### Web and API surfaces
+
+Authorized passive web baselines, headers, cookies, CORS, security.txt,
+robots/sitemap, bounded exposure checks, TLS/service evidence, OpenAPI inventory,
+and carefully gated active validation.
+
+### Servers and deployment
+
+Local Linux hardening, SSH and firewall evidence, listening services, Docker and
+web-root checks, reverse-proxy concerns, Cloudflare-aware guidance, and least
+privilege review.
+
+### Agent-ready capability library
+
+The modular playbooks under [`skills/`](skills/) provide progressive discovery,
+framework context, workflows, and verification criteria:
+
+| Capability | Focus |
+| --- | --- |
+| `repository-security-review` | Source, dependencies, secrets, and architecture |
+| `web-application-baseline` | Authorized passive web assessment |
+| `api-contract-review` | OpenAPI inventory and bounded probes |
+| `server-hardening-review` | Host and service exposure |
+| `remediation-and-verification` | Root-cause fixes and retesting |
+
+Browse or search them from the CLI:
+
+```bash
+./agentsec capabilities
+./agentsec capabilities web
+```
+
+## CLI at a glance
+
+```bash
+# Repository audit profiles
+./agentsec repo . --scan-mode quick
+./agentsec repo . --scan-mode standard
 ./agentsec repo . --scan-mode deep
-./agentsec repo . --non-interactive --fail-on high
-./agentsec repo . --scope-mode diff --diff-base origin/main --instruction-file rules.md
-./agentsec scan --target ./app --target https://staging.example.com --authorized --non-interactive
-./agentsec scan --target-list ./targets.txt --scan-mode quick --non-interactive
-./agentsec api ./openapi.json
-./agentsec api ./openapi.json --base-url https://staging.example.com --authorized
-./agentsec server --local
-./agentsec web https://staging.example.com --authorized
+
+# Authorized web and API review
 ./agentsec web https://staging.example.com --authorized --baseline-only
-./agentsec url https://staging.example.com --authorized
+./agentsec api ./openapi.json
+
+# Host review and multi-target orchestration
+./agentsec server --local
+./agentsec scan --target ./app --target https://staging.example.com --authorized
+
+# Reports, capabilities, and maintenance
+./agentsec view
+./agentsec capabilities security
 ./agentsec --version
 ./agentsec update
 ```
 
-Each audit preserves raw tool output and writes a machine-readable
-`findings.json` review queue alongside `summary.json` and `summary.md` under
-`.agentsec/reports/<run>/`. A non-zero scanner result remains explicitly
-`review-needed` until the agent or a human correlates it with source and
-runtime architecture. The same run also emits `findings.sarif` for GitHub Code
-Scanning and other SARIF-compatible systems.
+Remote targets require `--authorized`. Active web validation additionally
+requires `--active`; it is never implied by a URL.
 
-JSON output from Trivy, Semgrep, and npm audit is normalized into
-evidence-backed findings with severity, affected location, dependency/CVE
-metadata, remediation, and deterministic deduplication. Each run also emits
-`vulnerabilities.json`, `vulnerabilities.csv`, per-finding Markdown, and
-`penetration_test_report.md`. A non-zero scanner result without parseable
-finding evidence remains explicitly `review-needed` until it is correlated with
-source and runtime architecture. The `scan` command accepts multiple local or
-authorized HTTP(S) targets and target-list files. Headless repository runs
-return exit code `2` when evidence-backed findings meet `--fail-on`.
+## Reports you can trust and inspect
 
-The included [security report workflow](.github/workflows/agentsec-security-report.yml)
-publishes the report as a pull-request artifact and uploads SARIF to GitHub Code
-Scanning when repository permissions allow it.
+Every audit run preserves a machine-readable and human-readable trail under:
 
-Open the latest report locally with the private viewer:
+```text
+.agentsec/reports/<run>/
+├── summary.md              # executive-readable result
+├── summary.json            # machine-readable metadata
+├── findings.json           # normalized review queue
+├── findings.sarif          # GitHub Code Scanning compatible output
+├── vulnerabilities.*       # normalized vulnerability exports when applicable
+├── run.json                # run metadata
+├── events.jsonl            # append-only execution events
+└── <raw evidence>          # original scanner and probe output
+```
+
+Open the latest report locally:
 
 ```bash
 ./agentsec view
-./agentsec view --no-browser
-./agentsec view --list
 ```
 
-The viewer binds to `127.0.0.1`, uses a random token in the URL, serves only the
-selected report run, and shuts down with `Ctrl-C`.
+The viewer binds to loopback, uses a random token, serves only the selected run,
+escapes report content, and shuts down with `Ctrl-C`.
 
-Every run also persists `run.json`, append-only `events.jsonl`, and
-`agents.json`. The viewer exposes token-protected `/api/state` and `/api/events`
-endpoints for local dashboards and automation to follow specialist progress.
-The specialist workers are deterministic local agents today and share a stable
-task/event contract with future LLM coordination.
-
-Website audit prompt:
+## Architecture
 
 ```text
-This is my website: https://example.com. Take a look at misconfigurations and perform an overall security audit. Look for vulnerabilities we can patch and hardening opportunities.
+SKILL.md                  Portable agent behavior and safety boundary
+references/               Progressive security knowledge
+skills/                   Modular capability playbooks and catalog
+mappings/                 Framework interpretation metadata
+scripts/                  Deterministic evidence collection
+tools/                    Capability validation and index generation
+tests/                    Regression and false-positive tests
+docs/                     Human-facing guides and CLI reference
+.github/workflows/        CI, security reports, and capability validation
 ```
 
-The agent should run a safe authorized baseline first, correlate results with the application source when available, separate patchable code issues from server/provider configuration, and ask before changing anything. Active validation remains opt-in with `--active`.
+The core design principle is simple: agents reason about architecture and risk;
+deterministic tools collect and preserve evidence.
 
-Web reports include structured observations for browser headers, CORS, cookies,
-robots.txt, sitemap.xml, security.txt, common sensitive paths, technology/API
-signals, and database items that cannot be verified from black-box traffic.
-`--baseline-only` completes these bounded checks without waiting for optional
-long-running surface scanners.
+## Documentation
 
-Active remote testing is explicit:
+- [Quick Start](docs/QUICKSTART.md)
+- [CLI Reference](docs/CLI_REFERENCE.md)
+- [Capabilities](docs/CAPABILITIES.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Usage](docs/USAGE.md)
+- [Installation](docs/INSTALLATION.md)
+- [Development](docs/DEVELOPMENT.md)
+- [Remediation Guide](docs/REMEDIATION_GUIDE.md)
+- [Security Policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+
+## Development
+
+Run the complete local quality gate:
 
 ```bash
-./agentsec web https://staging.example.com --authorized --active
+make check
 ```
 
-Only test systems you own or have permission to assess.
+AgentSec is MIT-licensed. See [`CITATION.cff`](CITATION.cff) for citation
+metadata and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community standards.
 
-## Advanced
+<div align="center">
 
-AgentSec can reason about:
+**Audit. Reason. Remediate. Verify.**
 
-- SQL injection, XSS, SSRF, command injection, path traversal, CSRF and IDOR
-- authentication, sessions, MFA, passkeys and step-up authentication
-- database roles, service identities, cloud IAM and CI/CD least privilege
-- vulnerable and malicious packages, install scripts and supply-chain incidents
-- Linux servers, SSH, firewalls, Docker, web servers and exposed services
-- Cloudflare WAF, rate limiting, Turnstile, origin protection and caching boundaries
-- exposed directories, backups, dotfiles, logs, source maps and public assets
-- architecture, trust boundaries, sensitive data and blast radius
-
-AgentSec separates **confirmed vulnerabilities**, **security design gaps**, **security opportunities**, and items that **need review** so every observation does not become a red siren.
-
-## Docs
-
-- [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
-- [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
-- [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
-- [`docs/USAGE.md`](docs/USAGE.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/SECURITY_CONCEPTS.md`](docs/SECURITY_CONCEPTS.md)
-- [`docs/FRESH_INTELLIGENCE.md`](docs/FRESH_INTELLIGENCE.md)
-- [`docs/REMEDIATION_GUIDE.md`](docs/REMEDIATION_GUIDE.md)
-- [`references/standards-and-tools.md`](references/standards-and-tools.md)
-- [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- [`SECURITY.md`](SECURITY.md)
-- [`CHANGELOG.md`](CHANGELOG.md)
-
-<p align="center"><strong>Audit. Reason. Remediate. Verify.</strong></p>
-
-## Support development
-
-If AgentSec is useful to you, you can support its development and security research with crypto:
-
-| Network | Address |
-| --- | --- |
-| Solana | `8iWkKbf3fzRJTDeN8Z2xCTAxNRW7P4by6esNL4MvLDNb` |
-| Ethereum / EVM | `0xEcCD423fb879eBcDe42D50cB9B99AcF72cF8506a` |
-| Bitcoin | `bc1qq8q6s485m73vzq62ucl6v48t36fuf0t5q2ly2r` |
-| Monero | `868iJ8XTJpaYcyGTAs5hqPWvKBszDF11ERoYZg2NRU8PBogEjMecU6Q5USCgrJbDXHUNfxFrq3m5PAUaFwnKXU5WJxM8krP` |
-
-Always verify the network and address before sending funds.
+</div>

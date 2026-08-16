@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0.0",
+  "project": "AgentSec",
+  "repository": "https://github.com/0xcryptj/AgentSec",
+  "total_capabilities": 5,
+  "capabilities": [
+    {
+      "name": "api-contract-review",
+      "description": "Inventory an OpenAPI or Swagger contract and safely probe bounded read-only endpoints for authentication, error handling, and exposure signals. Use when an API specification is available for an authorized service.",
+      "domain": "cybersecurity",
+      "subdomain": "api-security",
+      "tags": [
+        "openapi",
+        "api-security",
+        "authorization",
+        "error-handling"
+      ],
+      "version": "1.0",
+      "path": "skills/api-contract-review"
+    },
+    {
+      "name": "remediation-and-verification",
+      "description": "Turn AgentSec evidence into small, root-cause fixes with focused regression tests and a retest record. Use after an audit identifies a confirmed issue, security design gap, or high-confidence dependency risk.",
+      "domain": "cybersecurity",
+      "subdomain": "vulnerability-management",
+      "tags": [
+        "remediation",
+        "verification",
+        "secure-coding",
+        "regression-testing"
+      ],
+      "version": "1.0",
+      "path": "skills/remediation-and-verification"
+    },
+    {
+      "name": "repository-security-review",
+      "description": "Review a local repository for architecture risks, vulnerable dependencies, secrets, unsafe source patterns, and deployment weaknesses. Use this capability when a project needs a defensible source and supply-chain security baseline.",
+      "domain": "cybersecurity",
+      "subdomain": "devsecops",
+      "tags": [
+        "repository-audit",
+        "supply-chain",
+        "secrets",
+        "architecture"
+      ],
+      "version": "1.0",
+      "path": "skills/repository-security-review"
+    },
+    {
+      "name": "server-hardening-review",
+      "description": "Review a local Linux host or authorized server exposure for patch state, listening services, SSH, firewall, permissions, containers, and web roots. Use it when deployment or host hardening is part of the security scope.",
+      "domain": "cybersecurity",
+      "subdomain": "network-security",
+      "tags": [
+        "server-hardening",
+        "linux",
+        "containers",
+        "exposure"
+      ],
+      "version": "1.0",
+      "path": "skills/server-hardening-review"
+    },
+    {
+      "name": "web-application-baseline",
+      "description": "Perform an authorized passive web baseline covering headers, cookies, CORS, metadata, sensitive paths, and API signals. Use it before active testing or code changes against an Internet-facing application.",
+      "domain": "cybersecurity",
+      "subdomain": "web-application-security",
+      "tags": [
+        "web-security",
+        "headers",
+        "cors",
+        "exposure"
+      ],
+      "version": "1.0",
+      "path": "skills/web-application-baseline"
+    }
+  ],
+  "coverage": {
+    "subdomains": {
+      "api-security": 1,
+      "devsecops": 1,
+      "network-security": 1,
+      "vulnerability-management": 1,
+      "web-application-security": 1
+    },
+    "framework_mappings": {
+      "mitre_attack": 5,
+      "nist_csf": 5,
+      "owasp": 5
+    }
+  }
+}

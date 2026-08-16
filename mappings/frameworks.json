@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "frameworks": {
+    "mitre_attack": {"name": "MITRE ATT&CK", "purpose": "adversary technique context"},
+    "nist_csf": {"name": "NIST CSF 2.0", "purpose": "defensive outcome and governance context"},
+    "owasp": {"name": "OWASP ASVS/WSTG/API Security", "purpose": "application verification context"}
+  },
+  "interpretation": "Mappings prioritize evidence and reporting; they do not certify compliance or replace human correlation."
+}

@@ -77,6 +77,10 @@ class CliTests(unittest.TestCase):
         args = build_parser().parse_args(["view", "--list"])
         self.assertTrue(args.list_runs)
 
+    def test_capabilities_command_is_available(self):
+        args = build_parser().parse_args(["capabilities", "web"])
+        self.assertEqual(args.query, "web")
+
     def test_summary_contains_finding_status_and_category_counts(self):
         with TemporaryDirectory() as directory:
             outdir = Path(directory) / "run"

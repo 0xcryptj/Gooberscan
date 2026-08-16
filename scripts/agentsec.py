@@ -681,6 +681,27 @@ def view_reports(args: argparse.Namespace) -> int:
     return serve(REPORT_ROOT, args.run_name, port=args.port, open_browser=not args.no_browser)
 
 
+def list_capabilities(args: argparse.Namespace) -> int:
+    """List or search the portable AgentSec capability catalog."""
+    catalog_path = ROOT / "skills" / "index.json"
+    try:
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"AgentSec: capability catalog unavailable: {exc}", file=sys.stderr)
+        return 1
+    query = str(getattr(args, "query", "") or "").lower().strip()
+    capabilities = catalog.get("capabilities", [])
+    if query:
+        capabilities = [item for item in capabilities if query in json.dumps(item).lower()]
+    if not capabilities:
+        print("No matching AgentSec capabilities.")
+        return 0
+    print(f"AgentSec capabilities ({len(capabilities)}):")
+    for item in capabilities:
+        print(f"- {item['name']} [{item.get('subdomain', 'uncategorized')}] — {item.get('description', '')}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentsec",
@@ -689,6 +710,8 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=textwrap.dedent(
             """
             Examples:
+              agentsec capabilities
+              agentsec capabilities web
               agentsec repo .
               agentsec repo . --fix
               agentsec server --local
@@ -708,6 +731,10 @@ def build_parser() -> argparse.ArgumentParser:
     view.add_argument("--no-browser", action="store_true", help="print the tokened URL without opening a browser")
     view.add_argument("--list", dest="list_runs", action="store_true", help="list saved report runs newest first")
     view.set_defaults(func=view_reports)
+
+    capabilities = sub.add_parser("capabilities", help="list or search modular AgentSec security playbooks")
+    capabilities.add_argument("query", nargs="?", help="case-insensitive name, tag, domain, or framework search")
+    capabilities.set_defaults(func=list_capabilities)
 
     repo = sub.add_parser("repo", help="audit source, dependencies, secrets, and deployment configuration")
     repo.add_argument("path", nargs="?", default=".")

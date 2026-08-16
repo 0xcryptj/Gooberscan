@@ -1,13 +1,18 @@
 # AgentSec Documentation
 
-Start small. The root README is intentionally short; this directory contains the deeper material.
+The README is the product overview. This directory contains the deeper material
+for users, contributors, and security reviewers.
 
 ## Start here
 
-- [Quick Start](QUICKSTART.md) - install AgentSec and run a first audit
-- [Getting Started](GETTING_STARTED.md) - concepts and first workflow
-- [Installation](INSTALLATION.md) - agent and optional scanner setup
-- [Usage](USAGE.md) - CLI modes and examples
+| Guide | Use it for |
+| --- | --- |
+| [Capabilities](CAPABILITIES.md) | Modular playbooks and discovery metadata |
+| [CLI Reference](CLI_REFERENCE.md) | Commands, safety gates, profiles, and report output |
+| [Quick Start](QUICKSTART.md) | Installing AgentSec and running a first audit |
+| [Getting Started](GETTING_STARTED.md) | Concepts and the first workflow |
+| [Installation](INSTALLATION.md) | Agent and optional scanner setup |
+| [Usage](USAGE.md) | CLI modes and practical examples |
 
 ## How AgentSec works
 
@@ -20,6 +25,7 @@ Start small. The root README is intentionally short; this directory contains the
 
 - [Development](DEVELOPMENT.md) - extending AgentSec
 - [Contributing](../CONTRIBUTING.md) - contribution workflow
+- [Code of Conduct](../CODE_OF_CONDUCT.md) - community expectations
 - [Security Policy](../SECURITY.md) - disclosure and scope boundaries
 
 ## Standards

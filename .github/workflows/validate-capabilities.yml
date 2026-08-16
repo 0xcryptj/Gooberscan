@@ -1,0 +1,31 @@
+name: Validate AgentSec capabilities
+
+on:
+  push:
+    paths:
+      - "skills/**"
+      - "tools/**"
+      - ".github/workflows/validate-capabilities.yml"
+  pull_request:
+    paths:
+      - "skills/**"
+      - "tools/**"
+      - ".github/workflows/validate-capabilities.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Validate capability metadata
+        run: python tools/validate_skills.py
+      - name: Verify generated capability index
+        run: |
+          python tools/build_skill_index.py
+          git diff --exit-code -- skills/index.json

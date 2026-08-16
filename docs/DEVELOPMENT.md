@@ -16,6 +16,15 @@ AgentSec should remain:
 
 ## Local checks
 
+The preferred contributor command is:
+
+```bash
+make check
+```
+
+It runs syntax checks, shell validation, unit tests, capability validation,
+catalog generation, and CLI smoke tests.
+
 Python syntax:
 
 ```bash
@@ -50,6 +59,9 @@ AgentSec uses progressive disclosure:
 - `SKILL.md` contains core behavior and routing
 - `references/` contains deeper security playbooks
 - `scripts/` collects deterministic evidence
+- `skills/` contains modular capability packages with searchable metadata
+- `tools/` validates capabilities and generates `skills/index.json`
+- `mappings/` records framework interpretation metadata
 - `docs/` explains the project to humans
 
 Keep `SKILL.md` focused. Framework-specific or detailed knowledge should live in references so it is loaded only when useful.

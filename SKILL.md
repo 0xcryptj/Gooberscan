@@ -77,6 +77,27 @@ Examples:
 10. Run focused regression/security checks after remediation.
 11. Never silently weaken authentication, authorization, TLS, validation, logging, isolation, or security headers just to make tests pass.
 
+## Capability routing
+
+Use the modular capability library when the task needs a focused playbook beyond
+the core audit workflow. Search the catalog before inventing a procedure:
+
+```bash
+./agentsec capabilities
+./agentsec capabilities identity
+./agentsec capabilities supply-chain
+./agentsec capabilities ai
+```
+
+Select the narrowest matching capability and load its `SKILL.md`. The current
+library covers repository, web, API, server, identity, secrets, CI/CD supply
+chain, cloud, containers, AI-agent security, incident response, remediation,
+and vulnerability prioritization. Combine capabilities when a task crosses
+trust boundaries, but keep the execution scope explicit.
+
+Capability playbooks are defensive guidance. They do not replace authorization,
+source correlation, provider configuration review, or the safety boundary below.
+
 ## Token-efficient repository reading
 
 For repository work, read [references/repo-reading.md](references/repo-reading.md) first.

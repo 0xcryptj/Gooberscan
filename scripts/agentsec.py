@@ -301,6 +301,16 @@ def audit_repo(args: argparse.Namespace) -> int:
     ))
     observations = architecture_observations(architecture_output)
 
+    # Keep direct Python invocations equivalent to the wrapper: architecture
+    # evidence must describe the target repository, not AgentSec itself.
+    architecture_output = outdir / "architecture.json"
+    checks.append(run_cmd(
+        "architecture inventory",
+        [sys.executable, str(ROOT / "scripts" / "architecture_inventory.py"), str(path), "--output", str(architecture_output)],
+        outdir,
+        cwd=path,
+    ))
+
     checks.append(find_sensitive_artifacts(path, outdir))
 
     source_output = outdir / "source-security.json"

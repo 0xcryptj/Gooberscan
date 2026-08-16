@@ -126,6 +126,12 @@ The baseline can combine HTTP/TLS/header review, public metadata checks, safe se
 
 Active validation is deliberately opt-in. The goal is controlled confirmation of defensive findings on an authorized target, not exploitation for persistence or access.
 
+For a fast, bounded web review that produces actionable black-box observations,
+use `--authorized --baseline-only`. AgentSec checks response headers, CORS,
+cookies, crawler/security contact files, common sensitive paths, SPA soft-404s,
+technology/API indicators, and explicitly marks database security as requiring
+source/provider review when it cannot be observed remotely.
+
 ## Directory exposure workflow
 
 If Gobuster or ffuf finds a path:
@@ -180,6 +186,11 @@ When an agent implements the remediation, it should also report changed files an
 
 ```text
 Use AgentSec to audit this repo. Start by mapping architecture and trust boundaries. Give me confirmed vulnerabilities first, then design gaps and opportunities.
+
+For a complete audit response, always report the tested coverage and limitations:
+which dependency, secret, SAST, web, architecture, authentication,
+authorization, database, storage, CI/CD, cloud/edge, and exposed-path checks
+actually ran. A clean exit code is not proof that untested controls are safe.
 ```
 
 ```text

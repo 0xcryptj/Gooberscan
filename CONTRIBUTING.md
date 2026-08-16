@@ -42,6 +42,9 @@ scripts/                 deterministic evidence collection
 agentsec                 CLI entry point
 tests/                   regression tests
 docs/                    user/developer documentation
+skills/                  modular capability playbooks and generated catalog
+tools/                   capability validation and index-generation utilities
+mappings/                framework metadata and interpretation notes
 .github/workflows/       CI
 ```
 
@@ -54,7 +57,13 @@ git clone https://github.com/0xcryptj/AgentSec.git
 cd AgentSec
 ```
 
-Run syntax checks:
+Run the complete local check suite:
+
+```bash
+make check
+```
+
+Or run individual checks:
 
 ```bash
 python3 -m py_compile scripts/agentsec.py scripts/architecture_inventory.py
@@ -67,6 +76,8 @@ Run tests:
 
 ```bash
 python3 -m unittest discover -s tests -v
+python3 tools/validate_skills.py
+python3 tools/build_skill_index.py
 ```
 
 Smoke test:
@@ -76,7 +87,7 @@ python3 scripts/agentsec.py --help
 python3 scripts/architecture_inventory.py . --output /tmp/agentsec-architecture.json
 ```
 
-## Agent Skill validation
+## Capability and Agent Skill validation
 
 AgentSec CI validates the packaged skill against the Agent Skills reference tooling.
 
@@ -87,6 +98,13 @@ When changing `SKILL.md`:
 - make the description specific enough for agent discovery
 - preserve progressive disclosure into `references/`
 - avoid stuffing large framework-specific material directly into `SKILL.md`
+
+When changing a modular capability under `skills/`:
+
+- keep its directory name and frontmatter `name` identical
+- include `When to Use`, `Prerequisites`, `Workflow`, and `Verification`
+- use framework mappings as navigation metadata, not compliance claims
+- rebuild `skills/index.json` and run `python3 tools/validate_skills.py`
 
 ## Adding a deterministic check
 

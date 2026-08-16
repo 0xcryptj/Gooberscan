@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: AgentSec
+message: >-
+  If AgentSec supports your security or development work, please cite the
+  project and include the version used.
+type: software
+authors:
+  - family-names: cryptj
+    given-names: 0x
+    alias: 0xcryptj
+repository-code: https://github.com/0xcryptj/AgentSec
+license: MIT
+version: 1.2.1
+date-released: 2026-08-16
+keywords:
+  - application-security
+  - devsecops
+  - agent-skills
+  - security-automation

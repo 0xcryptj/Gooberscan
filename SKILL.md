@@ -160,6 +160,20 @@ The normal entry point is:
 ./agentsec repo .
 ```
 
+Repository profiles:
+
+```bash
+./agentsec repo . --scan-mode quick
+./agentsec repo . --scan-mode standard
+./agentsec repo . --scan-mode deep
+```
+
+`quick` collects architecture, sensitive-artifact, and package-manager evidence
+while skipping optional heavy scanners. `standard` is the normal balanced audit.
+`deep` runs the available optional scanners and includes filesystem license
+analysis when Trivy is installed. Every report records the selected profile and
+which checks were skipped.
+
 The wrapper should automatically generate architecture evidence and refresh security intelligence before deterministic repository checks.
 
 Inspect at minimum:
@@ -297,6 +311,29 @@ Baseline authorized assessment:
 ```bash
 ./agentsec web https://example.com --authorized
 ```
+
+For a bounded report that must complete before optional long-running scanners,
+use:
+
+```bash
+./agentsec web https://example.com --authorized --baseline-only
+```
+
+When a user asks for vulnerabilities or misconfigurations, do not stop at a
+clean scanner exit code. Read the complete report and state coverage explicitly:
+
+- response headers, TLS/redirect behavior, CORS, cookies and cache controls
+- robots.txt, sitemap.xml and security.txt opportunities
+- common exposed files, backup/configuration paths and API specifications
+- soft-404 behavior so SPA fallbacks are not reported as exposed directories
+- authentication, authorization, tenant boundaries, database roles/policies,
+  storage, webhooks, queues, CI/CD, cloud/edge controls and secrets when source
+  or provider configuration is available
+- which optional scanners ran, which were skipped, and what remains untested
+
+Separate confirmed vulnerabilities, design gaps, hardening opportunities,
+not-observed checks, and source/provider review items. Never summarize “no
+findings” without also naming the tested surface and its limitations.
 
 Equivalent URL alias:
 
